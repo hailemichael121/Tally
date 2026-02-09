@@ -51,8 +51,8 @@ app.use((req, res, next) => {
 
   console.log(
     `${colors.dim}[${timestamp}]${colors.reset} ` +
-      `${colors.bright}${colors.cyan}→ ${req.method} ${req.path}${colors.reset} ` +
-      `${colors.dim}from ${req.ip}${colors.reset}`,
+    `${colors.bright}${colors.cyan}→ ${req.method} ${req.path}${colors.reset} ` +
+    `${colors.dim}from ${req.ip}${colors.reset}`,
   );
 
   try {
@@ -60,7 +60,7 @@ app.use((req, res, next) => {
     if (bodyKeys.length > 0 && req.path !== "/uploads") {
       console.log(
         `${colors.dim}   Body:${colors.reset} ` +
-          `${colors.white}${JSON.stringify(req.body, null, 2).replace(/\n/g, "\n   ")}${colors.reset}`,
+        `${colors.white}${JSON.stringify(req.body, null, 2).replace(/\n/g, "\n   ")}${colors.reset}`,
       );
     }
 
@@ -68,7 +68,7 @@ app.use((req, res, next) => {
     if (queryKeys.length > 0) {
       console.log(
         `${colors.dim}   Query:${colors.reset} ` +
-          `${colors.white}${JSON.stringify(req.query)}${colors.reset}`,
+        `${colors.white}${JSON.stringify(req.query)}${colors.reset}`,
       );
     }
   } catch {
@@ -89,8 +89,8 @@ app.use((req, res, next) => {
 
     console.log(
       `${colors.dim}[${timestamp}]${colors.reset} ` +
-        `${colors.bright}${statusColor}${statusSymbol} ${req.method} ${req.path} ${res.statusCode}${colors.reset} ` +
-        `${colors.dim}(${responseTime}ms)${colors.reset}`,
+      `${colors.bright}${statusColor}${statusSymbol} ${req.method} ${req.path} ${res.statusCode}${colors.reset} ` +
+      `${colors.dim}(${responseTime}ms)${colors.reset}`,
     );
 
     try {
@@ -101,7 +101,7 @@ app.use((req, res, next) => {
           if (responseKeys.length > 0) {
             console.log(
               `${colors.dim}   Response:${colors.reset} ` +
-                `${colors.white}${JSON.stringify(parsed, null, 2).replace(/\n/g, "\n   ")}${colors.reset}`,
+              `${colors.white}${JSON.stringify(parsed, null, 2).replace(/\n/g, "\n   ")}${colors.reset}`,
             );
           }
         } catch {
@@ -130,14 +130,14 @@ app.use(
 
     console.log(
       `${colors.dim}[${timestamp}]${colors.reset} ` +
-        `${colors.bright}${colors.red}💥 UNHANDLED ERROR:${colors.reset} ` +
-        message,
+      `${colors.bright}${colors.red}💥 UNHANDLED ERROR:${colors.reset} ` +
+      message,
     );
 
     if (error instanceof Error && error.stack) {
       console.log(
         `${colors.dim}   Stack:${colors.reset} ` +
-          `${colors.red}${error.stack.split("\n").slice(0, 3).join("\n   ")}${colors.reset}`,
+        `${colors.red}${error.stack.split("\n").slice(0, 3).join("\n   ")}${colors.reset}`,
       );
     }
 
@@ -164,14 +164,16 @@ const entrySchema = z.object({
   userId: z.string(),
   date: z.string(),
   count: z.number().int().min(1),
-  note: z.string().max(280).optional(),
-  tags: z.array(z.string().min(1)).max(6).optional(),
-  imageUrl: z.string().url().optional(),
+  note: z.string().max(280).nullable().optional(),  // Accepts string or null
+  tags: z.array(z.string().min(1)).max(6).nullable().optional(),  // Accepts array or null
+  imageUrl: z.string().url().nullable().optional(),  // Accepts string or null
 });
 
-const updateSchema = entrySchema.extend({
+const partialEntrySchema = entrySchema.partial();
+const updateSchema = z.object({
   id: z.string(),
-});
+  userId: z.string(),
+}).extend(partialEntrySchema.shape);
 
 const ownerSchema = z.object({
   userId: z.string(),
@@ -549,9 +551,9 @@ app.post("/entries", async (req, res) => {
         date: new Date(date),
         weekStart,
         count,
-        note: note || null,
-        tags: serializeTags(tags),
-        imageUrl: imageUrl || null,
+        note: note || null,  // This handles null properly
+        tags: serializeTags(tags || null),  // This handles null properly
+        imageUrl: imageUrl || null,  // This handles null properly
       },
     });
 
@@ -571,7 +573,6 @@ app.post("/entries", async (req, res) => {
     });
   }
 });
-
 app.put("/entries/:id", async (req, res) => {
   try {
     const parsed = updateSchema.safeParse({ ...req.body, id: req.params.id });
@@ -606,27 +607,41 @@ app.put("/entries/:id", async (req, res) => {
       });
     }
 
-    // If there's an existing image and a new one is being uploaded (or image is being removed),
-    // delete the old image from Cloudinary
-    if (entry.imageUrl && entry.imageUrl !== imageUrl) {
-      console.log(
-        `${colors.cyan}🔄 Deleting old image from Cloudinary${colors.reset}`,
-      );
-      await deleteImageFromCloudinary(entry.imageUrl);
+    // Build update data object with only provided fields
+    const updateData: any = { editedAt: new Date() };
+
+    if (date !== undefined) {
+      updateData.date = new Date(date);
+      updateData.weekStart = getWeekStart(date);
     }
 
-    const weekStart = getWeekStart(date);
+    if (count !== undefined) updateData.count = count;
+
+    // Handle note - if undefined, don't update; if null, set to null
+    if (note !== undefined) updateData.note = note;
+
+    // Handle tags - if undefined, don't update; if null, set to null
+    if (tags !== undefined) updateData.tags = serializeTags(tags);
+
+    // Handle image update
+    if (imageUrl !== undefined) {
+      // Delete old image if it exists and we're changing/removing the image
+      if (entry.imageUrl) {
+        // If imageUrl is null (removing image) OR it's a new URL (changing image)
+        if (imageUrl === null || imageUrl !== entry.imageUrl) {
+          console.log(
+            `${colors.cyan}🔄 Deleting old image from Cloudinary${colors.reset}`,
+          );
+          await deleteImageFromCloudinary(entry.imageUrl);
+        }
+      }
+      // Set the new imageUrl (could be null to remove, undefined to keep, or a new URL)
+      updateData.imageUrl = imageUrl;
+    }
+
     const updated = await prisma.entry.update({
       where: { id },
-      data: {
-        date: new Date(date),
-        weekStart,
-        count,
-        note: note || null,
-        tags: serializeTags(tags),
-        imageUrl: imageUrl || null,
-        editedAt: new Date(),
-      },
+      data: updateData,
     });
 
     console.log(`${colors.green}✓ Entry ${id} updated${colors.reset}`);
@@ -643,7 +658,6 @@ app.put("/entries/:id", async (req, res) => {
     });
   }
 });
-
 app.delete("/entries/:id", async (req, res) => {
   try {
     const parsed = ownerSchema.safeParse(req.body);
@@ -718,8 +732,8 @@ app.delete("/entries/:id", async (req, res) => {
 app.use((req, res) => {
   console.log(
     `${colors.dim}[${getTimestamp()}]${colors.reset} ` +
-      `${colors.bright}${colors.yellow}↪ ${req.method} ${req.path} 404${colors.reset} ` +
-      `${colors.dim}(Route not found)${colors.reset}`,
+    `${colors.bright}${colors.yellow}↪ ${req.method} ${req.path} 404${colors.reset} ` +
+    `${colors.dim}(Route not found)${colors.reset}`,
   );
   res.status(404).json({
     error: "Route not found",

@@ -57,6 +57,7 @@ function AppContent() {
     note: "",
     date: "",
     imageFile: null as File | null,
+    imageUrl: null as string | null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string>("");
@@ -149,6 +150,7 @@ function AppContent() {
 
     // Generate temporary ID for optimistic update
     const tempId = `temp-${Date.now()}`;
+    // In handleCreateEntry:
     const tempEntry: Entry = {
       id: tempId,
       userId: activeUserId,
@@ -161,7 +163,7 @@ function AppContent() {
           ?.split(",")
           .map((t: string) => t.trim())
           .filter(Boolean) || [],
-      imageUrl: entryData.imageUrl || null,
+      imageUrl: entryData.imageUrl || null, // Use imageUrl from formState
       editedAt: null,
       user: activeUser!,
     };
@@ -202,9 +204,9 @@ function AppContent() {
         count: Number(entryData.count),
         tags: entryData.tags
           ? entryData.tags
-              .split(",")
-              .map((tag: string) => tag.trim())
-              .filter(Boolean)
+            .split(",")
+            .map((tag: string) => tag.trim())
+            .filter(Boolean)
           : undefined,
         note: entryData.note || undefined,
         imageUrl,
@@ -244,36 +246,68 @@ function AppContent() {
   const handleUpdateEntry = async (entryData: any) => {
     if (!activeUserId || isJudge) return;
 
-    const originalEntry = entries.find((e) => e.id === entryData.id);
+    // Find the original entry
+    const originalEntry = entries.find(e => e.id === entryData.id);
     if (!originalEntry) return;
 
-    // Optimistic update
+    // Create updated entry for optimistic update
     const updatedEntry: Entry = {
       ...originalEntry,
-      date: new Date(entryData.date).toISOString(),
       count: Number(entryData.count),
       note: entryData.note || null,
-      tags:
-        entryData.tags
-          ?.split(",")
-          .map((t: string) => t.trim())
-          .filter(Boolean) || [],
-      imageUrl: entryData.imageUrl || originalEntry.imageUrl,
+      tags: entryData.tags
+        ?.split(",")
+        .map((t: string) => t.trim())
+        .filter(Boolean) || [],
+      date: new Date(entryData.date).toISOString(),
+      weekStart: weekStartFromDate(entryData.date),
       editedAt: new Date().toISOString(),
     };
 
-    setEntries((prev) =>
-      prev.map((entry) => (entry.id === entryData.id ? updatedEntry : entry)),
-    );
+    // OPTIMISTIC UPDATE: Update entry in state immediately
+    setEntries(prev => prev.map(entry =>
+      entry.id === entryData.id ? updatedEntry : entry
+    ));
+
     setIsFormOpen(false);
     setSelectedEntry(null);
-
     addToast("Updating entry...", "info");
 
     try {
-      // Upload new image if exists
+      // Prepare only changed fields
+      const changes: any = {
+        userId: activeUserId,
+      };
+
+      // Only include fields that have changed from original
+      if (Number(entryData.count) !== originalEntry.count) {
+        changes.count = Number(entryData.count);
+      }
+
+      if (entryData.note !== originalEntry.note) {
+        changes.note = entryData.note || null;
+      }
+
+      if (entryData.date && new Date(entryData.date).toISOString() !== originalEntry.date) {
+        changes.date = new Date(entryData.date).toISOString();
+      }
+
+      // Handle tags comparison
+      const newTags = entryData.tags
+        ?.split(",")
+        .map((t: string) => t.trim())
+        .filter(Boolean) || [];
+      const originalTags = originalEntry.tags || [];
+
+      // Check if tags are different (simple comparison)
+      if (JSON.stringify(newTags.sort()) !== JSON.stringify(originalTags.sort())) {
+        changes.tags = newTags;
+      }
+
+      // Handle image upload if there's a new image file
       let imageUrl = originalEntry.imageUrl;
       if (entryData.imageFile) {
+        // Upload new image
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
@@ -290,59 +324,53 @@ function AppContent() {
         if (uploadResponse.ok) {
           const uploadData = await uploadResponse.json();
           imageUrl = uploadData.url;
+          changes.imageUrl = imageUrl;
         }
+      } else if (imagePreviewUrl === null && originalEntry.imageUrl) {
+        // Image was removed (preview is null but original had an image)
+        changes.imageUrl = null;
       }
 
-      const payload = {
-        id: entryData.id,
-        userId: activeUserId,
-        date: new Date(entryData.date).toISOString(),
-        count: Number(entryData.count),
-        tags: entryData.tags
-          ? entryData.tags
-              .split(",")
-              .map((tag: string) => tag.trim())
-              .filter(Boolean)
-          : undefined,
-        note: entryData.note || undefined,
-        imageUrl,
-      };
+      // Only send the request if there are actual changes
+      if (Object.keys(changes).length > 1) { // More than just userId
+        const response = await fetch(`${API_URL}/entries/${entryData.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(changes),
+        });
 
-      const response = await fetch(`${API_URL}/entries/${entryData.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+        if (response.ok) {
+          const serverUpdatedEntry = await response.json();
 
-      if (response.ok) {
-        const serverUpdatedEntry = await response.json();
+          // Update with server response to ensure consistency
+          setEntries(prev => prev.map(entry =>
+            entry.id === entryData.id ? serverUpdatedEntry : entry
+          ));
 
-        // Update with server response
-        setEntries((prev) =>
-          prev.map((entry) =>
-            entry.id === entryData.id ? serverUpdatedEntry : entry,
-          ),
-        );
+          // Refresh summary
+          loadSummary(selectedWeekStart || undefined);
 
-        // Refresh summary
-        loadSummary(selectedWeekStart || undefined);
-
-        addToast("Entry updated successfully!", "success");
+          addToast("Entry updated successfully!", "success");
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to update entry");
+        }
       } else {
-        throw new Error("Failed to update entry");
+        // No changes were made
+        addToast("No changes detected", "info");
       }
     } catch (error) {
-      // Rollback optimistic update
-      setEntries((prev) =>
-        prev.map((entry) =>
-          entry.id === entryData.id ? originalEntry : entry,
-        ),
-      );
-      setIsFormOpen(true);
+      // ROLLBACK: Revert optimistic update
+      setEntries(prev => prev.map(entry =>
+        entry.id === entryData.id ? originalEntry : entry
+      ));
 
+      setIsFormOpen(true);
       addToast("Failed to update entry", "error");
     }
   };
+
+
 
   // OPTIMISTIC DELETE
   const handleDeleteEntry = async (entry: Entry) => {
@@ -389,11 +417,11 @@ function AppContent() {
       note: "",
       date: new Date().toISOString().slice(0, 10),
       imageFile: null,
+      imageUrl: null, // Initialize for new entries
     });
     setImagePreviewUrl(null);
     setIsFormOpen(true);
   };
-
   const openEditEntry = (entry: Entry) => {
     setFormState({
       id: entry.id,
@@ -402,19 +430,24 @@ function AppContent() {
       note: entry.note ?? "",
       date: entry.date.slice(0, 10),
       imageFile: null,
+      imageUrl: entry.imageUrl, // Store original image URL
     });
-    setImagePreviewUrl(entry.imageUrl ?? null);
+    setImagePreviewUrl(entry.imageUrl);
     setIsFormOpen(true);
   };
 
   const handleSaveEntry = async () => {
     if (!activeUserId || isJudge) return;
 
+    setIsSubmitting(true);
+
     if (formState.id) {
       await handleUpdateEntry(formState);
     } else {
       await handleCreateEntry(formState);
     }
+
+    setIsSubmitting(false);
   };
 
   const handleTab = (tab: ActiveTab) => {

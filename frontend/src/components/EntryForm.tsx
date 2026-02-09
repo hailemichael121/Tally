@@ -9,6 +9,7 @@ interface EntryFormProps {
     note: string;
     date: string;
     imageFile: File | null;
+    imageUrl: string | null;
   };
   setFormState: (state: any) => void;
   imagePreviewUrl: string | null;
@@ -35,6 +36,9 @@ export default function EntryForm({
       onSave();
     }
   };
+
+  // Get the image URL to display (preview or existing)
+  const displayImageUrl = imagePreviewUrl || formState.imageUrl;
 
   return (
     <motion.div
@@ -137,12 +141,33 @@ export default function EntryForm({
               }
               disabled={isSubmitting}
             />
-            {imagePreviewUrl && (
-              <img
-                src={imagePreviewUrl}
-                alt="preview"
-                className="mt-3 h-36 w-full rounded-2xl border border-white/10 object-cover"
-              />
+
+            {displayImageUrl && (
+              <div className="mt-3">
+                <p className="mb-2 text-xs text-white/50">
+                  {formState.imageFile ? "New image preview:" : "Current image:"}
+                </p>
+                <img
+                  src={displayImageUrl}
+                  alt="preview"
+                  className="h-36 w-full rounded-2xl border border-white/10 object-cover"
+                />
+                {formState.id && formState.imageUrl && !formState.imageFile && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormState((prev: any) => ({
+                        ...prev,
+                        imageFile: null,
+                        imageUrl: null, // Clear the stored URL when removing
+                      }));
+                    }}
+                    className="mt-2 text-xs text-red-300 hover:text-red-400"
+                  >
+                    Remove image
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
