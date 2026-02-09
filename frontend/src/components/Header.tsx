@@ -48,7 +48,7 @@ export default function Header({
             </div>
           </div>
         </div>
-        <div className="glass-card flex min-w-[190px] flex-col gap-3 rounded-3xl px-4 py-3 text-xs text-white/70">
+        <div className="glass-card flex min-w-[340px] flex-col gap-3 rounded-3xl px-4 py-3 text-xs text-white/70">
           <div className="flex items-center gap-2 text-white/80">
             <IconUser />
             <span>{activeUser?.loveName ?? "User"}</span>
