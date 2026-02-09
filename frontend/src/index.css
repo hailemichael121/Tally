@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 :root {
-  font-family: "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+  font-family:
+    "Manrope", "Plus Jakarta Sans", "SF Pro Display", "SF Pro Text", "Inter",
+    system-ui, sans-serif;
   color-scheme: light dark;
 }
 
