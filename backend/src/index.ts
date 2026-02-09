@@ -25,6 +25,7 @@ const colors = {
   bgBlue: "\x1b[44m",
   bgMagenta: "\x1b[45m",
 };
+
 const host = process.env.HOST || `https://tally-bibx.onrender.com`;
 console.log(
   `${colors.dim}└─ Health:${colors.reset} ${colors.blue}${host}/${process.env.NODE_ENV === "development" ? "health" : ""}${colors.reset}`,
@@ -32,6 +33,7 @@ console.log(
 console.log(
   `${colors.dim}└─ Health:${colors.reset} ${colors.blue}${host}/${colors.reset}`,
 );
+
 const getTimestamp = () => {
   return new Date().toISOString().replace("T", " ").substring(0, 19);
 };
@@ -249,6 +251,76 @@ const hasCloudinaryConfig = () => {
     process.env.CLOUDINARY_API_KEY &&
     process.env.CLOUDINARY_API_SECRET,
   );
+};
+
+// Helper function to extract public ID from Cloudinary URL
+const extractPublicId = (url: string): string | null => {
+  try {
+    // Cloudinary URL pattern: https://res.cloudinary.com/<cloud_name>/<resource_type>/<type>/<version>/<public_id>.<format>
+    const match = url.match(
+      /\/upload\/(?:v\d+\/)?(.+?)\.(?:jpg|jpeg|png|gif|webp|bmp|tiff)/i,
+    );
+    if (match && match[1]) {
+      return match[1];
+    }
+
+    // Try alternative pattern
+    const parts = url.split("/");
+    const filename = parts[parts.length - 1];
+    const publicId = filename.split(".")[0];
+
+    // Remove the version prefix if present
+    return publicId.replace(/^v\d+\//, "");
+  } catch (error) {
+    console.log(
+      `${colors.yellow}⚠ Could not extract public ID from URL: ${url}${colors.reset}`,
+    );
+    return null;
+  }
+};
+
+// Helper function to delete image from Cloudinary
+const deleteImageFromCloudinary = async (
+  imageUrl: string,
+): Promise<boolean> => {
+  if (!hasCloudinaryConfig()) {
+    console.log(
+      `${colors.yellow}⚠ Cloudinary not configured, skipping image deletion${colors.reset}`,
+    );
+    return false;
+  }
+
+  try {
+    const publicId = extractPublicId(imageUrl);
+    if (!publicId) {
+      console.log(
+        `${colors.yellow}⚠ Could not extract public ID from URL: ${imageUrl}${colors.reset}`,
+      );
+      return false;
+    }
+
+    // Delete the image from Cloudinary
+    const result = await cloudinary.uploader.destroy(publicId);
+
+    if (result.result === "ok") {
+      console.log(
+        `${colors.green}✓ Deleted image from Cloudinary: ${publicId}${colors.reset}`,
+      );
+      return true;
+    } else {
+      console.log(
+        `${colors.yellow}⚠ Cloudinary deletion result: ${result.result} for ${publicId}${colors.reset}`,
+      );
+      return false;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.log(
+      `${colors.yellow}⚠ Failed to delete image from Cloudinary:${colors.reset}`,
+      message,
+    );
+    return false;
+  }
 };
 
 app.get("/", (_req, res) => {
@@ -532,6 +604,15 @@ app.put("/entries/:id", async (req, res) => {
       });
     }
 
+    // If there's an existing image and a new one is being uploaded (or image is being removed),
+    // delete the old image from Cloudinary
+    if (entry.imageUrl && entry.imageUrl !== imageUrl) {
+      console.log(
+        `${colors.cyan}🔄 Deleting old image from Cloudinary${colors.reset}`,
+      );
+      await deleteImageFromCloudinary(entry.imageUrl);
+    }
+
     const weekStart = getWeekStart(date);
     const updated = await prisma.entry.update({
       where: { id },
@@ -598,7 +679,23 @@ app.delete("/entries/:id", async (req, res) => {
       });
     }
 
+    // Delete image from Cloudinary if it exists
+    if (entry.imageUrl) {
+      console.log(
+        `${colors.cyan}🔄 Deleting image from Cloudinary${colors.reset}`,
+      );
+      const imageDeleted = await deleteImageFromCloudinary(entry.imageUrl);
+
+      if (!imageDeleted) {
+        console.log(
+          `${colors.yellow}⚠ Could not delete image from Cloudinary, but proceeding with entry deletion${colors.reset}`,
+        );
+      }
+    }
+
+    // Delete the entry from database
     await prisma.entry.delete({ where: { id: req.params.id } });
+
     console.log(
       `${colors.green}✓ Entry ${req.params.id} deleted${colors.reset}`,
     );

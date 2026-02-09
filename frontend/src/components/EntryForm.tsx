@@ -29,6 +29,13 @@ export default function EntryForm({
   onClose,
   onSave,
 }: EntryFormProps) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isSubmitting) {
+      onSave();
+    }
+  };
+
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-md"
@@ -37,11 +44,12 @@ export default function EntryForm({
       exit={{ opacity: 0 }}
       onClick={onClose}
     >
-      <div
+      <form
+        onSubmit={handleSubmit}
         className="glass-card w-[90%] max-w-md max-h-[85vh] overflow-y-auto rounded-3xl p-6 shadow-soft"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between    border border-white/10 rounded-2xl px-4 py-3   w-full bg-ink backdrop-blur-sm">
+        <div className="flex items-start justify-between sticky top-0 bg-ink/90 backdrop-blur-sm">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">
               {formState.id ? "Edit Entry" : "New Entry"}
@@ -51,8 +59,10 @@ export default function EntryForm({
             </h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="rounded-full border border-white/10 px-3 py-2 text-xs transition-colors hover:bg-white/10"
+            disabled={isSubmitting}
           >
             Close
           </button>
@@ -60,12 +70,12 @@ export default function EntryForm({
 
         <div className="mt-6 space-y-4">
           <div>
-            <label className="mb-2 block text-xs text-white/60">Count</label>
+            <label className="mb-2 block text-xs text-white/60">Count *</label>
             <input
               className="soft-input w-full"
               type="number"
-              placeholder="በይ ቁጥር ተናገሪ"
               min={1}
+              required
               value={formState.count}
               onChange={(event) =>
                 setFormState((prev: any) => ({
@@ -73,6 +83,7 @@ export default function EntryForm({
                   count: event.target.value,
                 }))
               }
+              disabled={isSubmitting}
             />
           </div>
 
@@ -90,6 +101,7 @@ export default function EntryForm({
                   tags: event.target.value,
                 }))
               }
+              disabled={isSubmitting}
             />
             <p className="mt-2 text-[11px] text-white/40">Not essential.</p>
           </div>
@@ -99,7 +111,7 @@ export default function EntryForm({
             <textarea
               className="soft-input w-full"
               rows={3}
-              placeholder="እሺ ማስተባበያ አለሽ "
+              placeholder="eshi mastebabeya alesh ee kebatri for her • mastebabeya alek ee kebatra"
               value={formState.note}
               onChange={(event) =>
                 setFormState((prev: any) => ({
@@ -107,13 +119,12 @@ export default function EntryForm({
                   note: event.target.value,
                 }))
               }
+              disabled={isSubmitting}
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-xs text-white/60">
-              Image(screenshots ቅብርጥሴ)
-            </label>
+            <label className="mb-2 block text-xs text-white/60">Image</label>
             <input
               className="soft-input w-full"
               type="file"
@@ -124,6 +135,7 @@ export default function EntryForm({
                   imageFile: event.target.files?.[0] ?? null,
                 }))
               }
+              disabled={isSubmitting}
             />
             {imagePreviewUrl && (
               <img
@@ -135,10 +147,11 @@ export default function EntryForm({
           </div>
 
           <div>
-            <label className="mb-2 block text-xs text-white/60">Date</label>
+            <label className="mb-2 block text-xs text-white/60">Date *</label>
             <input
               className="soft-input w-full"
               type="date"
+              required
               value={formState.date}
               onChange={(event) =>
                 setFormState((prev: any) => ({
@@ -146,13 +159,14 @@ export default function EntryForm({
                   date: event.target.value,
                 }))
               }
+              disabled={isSubmitting}
             />
           </div>
         </div>
 
         <div className="mt-8 pb-4">
           <button
-            onClick={onSave}
+            type="submit"
             disabled={
               isSubmitting || !formState.count || !activeUser || isJudge
             }
@@ -165,7 +179,7 @@ export default function EntryForm({
                 : "Save Entry"}
           </button>
         </div>
-      </div>
+      </form>
     </motion.div>
   );
 }

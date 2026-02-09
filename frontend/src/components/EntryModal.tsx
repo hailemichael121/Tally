@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Entry } from "../types";
+import { useToast } from "../contexts/ToastContext";
 
 interface EntryModalProps {
   entry: Entry;
@@ -30,6 +31,14 @@ export default function EntryModal({
   onDelete,
   onImageClick,
 }: EntryModalProps) {
+  const { addToast } = useToast();
+
+  const handleDelete = async () => {
+    if (window.confirm("Are you sure you want to delete this entry?")) {
+      await onDelete(entry);
+    }
+  };
+
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-md"
@@ -116,9 +125,9 @@ export default function EntryModal({
             Edit
           </button>
           <button
-            onClick={() => onDelete(entry)}
+            onClick={handleDelete}
             disabled={entry.userId !== activeUserId || isJudge}
-            className="rounded-2xl border border-white/10 px-4 py-2 text-xs text-white/70 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-2xl border border-white/10 px-4 py-2 text-xs text-red-300 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Delete
           </button>
