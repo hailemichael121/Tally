@@ -49,7 +49,7 @@ export default function EntryForm({
         className="glass-card w-[90%] max-w-md max-h-[85vh] overflow-y-auto rounded-3xl p-6 shadow-soft"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between sticky top-0 bg-ink/90 backdrop-blur-sm">
+        <div className="flex items-start justify-between border border-white/10 rounded-2xl px-4 py-3 bg-ink backdrop-blur-sm">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">
               {formState.id ? "Edit Entry" : "New Entry"}
