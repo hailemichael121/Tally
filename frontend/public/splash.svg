@@ -1,0 +1,7 @@
+<svg width="1170" height="2532" viewBox="0 0 1170 2532" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1170" height="2532" fill="#0F0F0F"/>
+  <rect x="140" y="620" width="890" height="1292" rx="120" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.16)"/>
+  <circle cx="585" cy="1120" r="140" fill="rgba(242,214,211,0.18)"/>
+  <text x="585" y="1360" text-anchor="middle" fill="#F7F4EF" font-family="SF Pro Display, sans-serif" font-size="72" letter-spacing="8">TALLY</text>
+  <text x="585" y="1445" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="SF Pro Text, sans-serif" font-size="28" letter-spacing="6">quietly shared</text>
+</svg>
