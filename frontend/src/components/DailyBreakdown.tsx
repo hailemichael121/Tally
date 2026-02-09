@@ -39,6 +39,15 @@ export default function DailyBreakdown({
     {},
   );
 
+  // Add safe access to user data
+  const getUserDisplayName = (entry: Entry) => {
+    if (!entry.user) {
+      console.warn("Entry missing user data:", entry.id);
+      return "Unknown User";
+    }
+    return entry.user?.loveName || entry.user?.name || "User";
+  };
+
   return (
     <section id="history" className="glass-card rounded-3xl p-6 shadow-soft">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -80,7 +89,8 @@ export default function DailyBreakdown({
                     className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left transition-colors hover:bg-white/10"
                   >
                     <div>
-                      <p className="text-sm">{entry.user.loveName}</p>
+                      {/* Use the safe function instead of direct access */}
+                      <p className="text-sm">{getUserDisplayName(entry)}</p>
                       <p className="text-xs text-white/50">
                         Count: {entry.count}
                       </p>

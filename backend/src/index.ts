@@ -228,20 +228,22 @@ const deserializeTags = (value?: string | null) => {
   }
 };
 
-const mapEntry = (entry: {
-  tags?: string | null;
-  note?: string | null;
-  imageUrl?: string | null;
-}) => {
+const mapEntry = (entry: any) => {
   if (!entry || typeof entry !== "object") {
     return entry;
   }
 
   return {
-    ...entry,
-    tags: deserializeTags(entry.tags),
+    id: entry.id,
+    userId: entry.userId,
+    date: entry.date,
+    weekStart: entry.weekStart,
+    count: entry.count,
     note: entry.note || null,
+    tags: deserializeTags(entry.tags),
     imageUrl: entry.imageUrl || null,
+    editedAt: entry.editedAt || null,
+    user: entry.user,
   };
 };
 

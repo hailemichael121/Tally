@@ -57,7 +57,7 @@ export default function EntryModal({
               Entry
             </p>
             <h3 className="mt-2 text-lg font-semibold">
-              {entry.user.loveName}
+              {entry.user?.loveName || entry.user?.name || "User"}
             </h3>
             <p className="text-xs text-white/50">
               {formatDate(entry.date)} • {entry.count}

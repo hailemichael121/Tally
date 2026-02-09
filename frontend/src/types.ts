@@ -11,10 +11,12 @@ export type Entry = {
   date: string;
   weekStart: string;
   count: number;
-  note?: string | null;
-  tags?: string[] | null;
-  imageUrl?: string | null;
-  editedAt?: string | null;
+  note: string | null;
+  tags: string[];
+  imageUrl: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  editedAt: string | null;
   user: User;
 };
 
