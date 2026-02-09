@@ -25,7 +25,13 @@ const colors = {
   bgBlue: "\x1b[44m",
   bgMagenta: "\x1b[45m",
 };
-
+const host = process.env.HOST || `https://tally-bibx.onrender.com`;
+console.log(
+  `${colors.dim}└─ Health:${colors.reset} ${colors.blue}${host}/${process.env.NODE_ENV === "development" ? "health" : ""}${colors.reset}`,
+);
+console.log(
+  `${colors.dim}└─ Health:${colors.reset} ${colors.blue}${host}/${colors.reset}`,
+);
 const getTimestamp = () => {
   return new Date().toISOString().replace("T", " ").substring(0, 19);
 };
@@ -143,18 +149,8 @@ app.use(
   },
 );
 
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "https://your-frontend-domain.vercel.app", // Add your deployed frontend URL
-      "*", // Or be more specific for production
-    ],
-
-    credentials: true,
-  }),
-);
-app.use(express.json({ limit: "10mb" }));
+app.use(cors());
+app.use(express.json({ limit: "50mb" }));
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "",
@@ -255,11 +251,11 @@ const hasCloudinaryConfig = () => {
   );
 };
 
-app.get("/health", (_req, res) => {
+app.get("/", (_req, res) => {
   res.json({
     ok: true,
     timestamp: getTimestamp(),
-    environment: process.env.NODE_ENV || "development",
+    environment: process.env.NODE_ENV || "production",
   });
 });
 

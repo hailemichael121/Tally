@@ -12,6 +12,7 @@ import EntryForm from "./components/EntryForm";
 import EntryModal from "./components/EntryModal";
 import ImageZoom from "./components/ImageZoom";
 import NewEntrySection from "./components/NewEntrySection";
+import LoadingSkeleton from "./components/LoadingSkeleton";
 
 const API_URL = "http://localhost:4000";
 const STORAGE_KEY = "tally-active-user";
@@ -36,6 +37,7 @@ export default function App() {
   const [pinValue, setPinValue] = useState("");
   const [unlockedUser, setUnlockedUser] = useState<User | null>(null);
   const [authError, setAuthError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const [users, setUsers] = useState<User[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -68,6 +70,8 @@ export default function App() {
   const isJudge = activeUserId === "judge";
 
   const loadAllData = async (_activeUserId?: string) => {
+    setIsLoading(true);
+
     try {
       const usersResponse = await fetch(`${API_URL}/users`);
       const usersData = (await usersResponse.json()) as User[];
@@ -82,6 +86,8 @@ export default function App() {
       setWeeklySummary(summaryData);
     } catch (error) {
       console.error("Failed to load data:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -310,94 +316,100 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-ink text-white">
-      {!activeUserId && (
-        <PinLock
-          pinValue={pinValue}
-          setPinValue={setPinValue}
-          authError={authError}
-          onPinSubmit={handlePinSubmit}
-        />
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : (
+        <>
+          {!activeUserId && (
+            <PinLock
+              pinValue={pinValue}
+              setPinValue={setPinValue}
+              authError={authError}
+              onPinSubmit={handlePinSubmit}
+            />
+          )}
+
+          <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-24 pt-10 sm:px-8">
+            <Header
+              activeUser={activeUser}
+              weekNumber={weekNumber}
+              weekLabel={weekLabel}
+              onLogout={handleLogout}
+            />
+
+            <JudgeView isJudge={isJudge} />
+
+            <section className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+              <WeeklyTotals
+                activeUserId={activeUserId}
+                users={users}
+                weeklySummary={weeklySummary}
+              />
+
+              <WeeklyStatus
+                activeUserId={activeUserId}
+                users={users}
+                weeklySummary={weeklySummary}
+                isJudge={isJudge}
+              />
+            </section>
+
+            <DailyBreakdown
+              entries={entries}
+              selectedWeekStart={selectedWeekStart}
+              onWeekChange={(value) => setSelectedWeekStart(value)}
+              onEntryClick={setSelectedEntry}
+            />
+
+            <NewEntrySection
+              activeUserId={activeUserId}
+              isJudge={isJudge}
+              onNewEntry={openNewEntry}
+            />
+          </main>
+
+          <BottomNav activeTab={activeTab} onTabChange={handleTab} />
+
+          {/* Modals */}
+          <AnimatePresence>
+            {selectedEntry && (
+              <EntryModal
+                entry={selectedEntry}
+                activeUserId={activeUserId}
+                isJudge={isJudge}
+                onClose={() => setSelectedEntry(null)}
+                onEdit={openEditEntry}
+                onDelete={handleDeleteEntry}
+                onImageClick={(url) => setZoomImageUrl(url)}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {isFormOpen && (
+              <EntryForm
+                formState={formState}
+                setFormState={setFormState}
+                imagePreviewUrl={imagePreviewUrl}
+                activeUser={activeUser}
+                isSubmitting={isSubmitting}
+                isJudge={isJudge}
+                onClose={() => setIsFormOpen(false)}
+                onSave={handleSaveEntry}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {zoomImageUrl && (
+              <ImageZoom
+                imageUrl={zoomImageUrl}
+                onClose={() => setZoomImageUrl(null)}
+              />
+            )}
+          </AnimatePresence>
+        </>
       )}
-
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-24 pt-10 sm:px-8">
-        <Header
-          activeUser={activeUser}
-          weekNumber={weekNumber}
-          weekLabel={weekLabel}
-          onLogout={handleLogout}
-        />
-
-        <JudgeView isJudge={isJudge} />
-
-        <section className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-          <WeeklyTotals
-            activeUserId={activeUserId}
-            users={users}
-            weeklySummary={weeklySummary}
-          />
-
-          <WeeklyStatus
-            activeUserId={activeUserId}
-            users={users}
-            weeklySummary={weeklySummary}
-            isJudge={isJudge}
-          />
-        </section>
-
-        <DailyBreakdown
-          entries={entries}
-          selectedWeekStart={selectedWeekStart}
-          onWeekChange={(value) => setSelectedWeekStart(value)}
-          onEntryClick={setSelectedEntry}
-        />
-
-        <NewEntrySection
-          activeUserId={activeUserId}
-          isJudge={isJudge}
-          onNewEntry={openNewEntry}
-        />
-      </main>
-
-      <BottomNav activeTab={activeTab} onTabChange={handleTab} />
-
-      {/* Modals */}
-      <AnimatePresence>
-        {selectedEntry && (
-          <EntryModal
-            entry={selectedEntry}
-            activeUserId={activeUserId}
-            isJudge={isJudge}
-            onClose={() => setSelectedEntry(null)}
-            onEdit={openEditEntry}
-            onDelete={handleDeleteEntry}
-            onImageClick={(url) => setZoomImageUrl(url)}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isFormOpen && (
-          <EntryForm
-            formState={formState}
-            setFormState={setFormState}
-            imagePreviewUrl={imagePreviewUrl}
-            activeUser={activeUser}
-            isSubmitting={isSubmitting}
-            isJudge={isJudge}
-            onClose={() => setIsFormOpen(false)}
-            onSave={handleSaveEntry}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {zoomImageUrl && (
-          <ImageZoom
-            imageUrl={zoomImageUrl}
-            onClose={() => setZoomImageUrl(null)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
