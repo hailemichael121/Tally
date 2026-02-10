@@ -17,8 +17,8 @@ import EntryForm from "./components/EntryForm";
 import ImageZoom from "./components/ImageZoom";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 
-// const API_URL = "https://tally-bibx.onrender.com";
-const API_URL = "http://localhost:4000";
+const API_URL = "https://tally-bibx.onrender.com";
+// const API_URL = "http://localhost:4000";
 
 const STORAGE_KEY = "tally-active-user";
 
