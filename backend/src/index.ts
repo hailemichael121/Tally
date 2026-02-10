@@ -51,8 +51,8 @@ app.use((req, res, next) => {
 
   console.log(
     `${colors.dim}[${timestamp}]${colors.reset} ` +
-    `${colors.bright}${colors.cyan}→ ${req.method} ${req.path}${colors.reset} ` +
-    `${colors.dim}from ${req.ip}${colors.reset}`,
+      `${colors.bright}${colors.cyan}→ ${req.method} ${req.path}${colors.reset} ` +
+      `${colors.dim}from ${req.ip}${colors.reset}`,
   );
 
   try {
@@ -60,7 +60,7 @@ app.use((req, res, next) => {
     if (bodyKeys.length > 0 && req.path !== "/uploads") {
       console.log(
         `${colors.dim}   Body:${colors.reset} ` +
-        `${colors.white}${JSON.stringify(req.body, null, 2).replace(/\n/g, "\n   ")}${colors.reset}`,
+          `${colors.white}${JSON.stringify(req.body, null, 2).replace(/\n/g, "\n   ")}${colors.reset}`,
       );
     }
 
@@ -68,7 +68,7 @@ app.use((req, res, next) => {
     if (queryKeys.length > 0) {
       console.log(
         `${colors.dim}   Query:${colors.reset} ` +
-        `${colors.white}${JSON.stringify(req.query)}${colors.reset}`,
+          `${colors.white}${JSON.stringify(req.query)}${colors.reset}`,
       );
     }
   } catch {
@@ -89,8 +89,8 @@ app.use((req, res, next) => {
 
     console.log(
       `${colors.dim}[${timestamp}]${colors.reset} ` +
-      `${colors.bright}${statusColor}${statusSymbol} ${req.method} ${req.path} ${res.statusCode}${colors.reset} ` +
-      `${colors.dim}(${responseTime}ms)${colors.reset}`,
+        `${colors.bright}${statusColor}${statusSymbol} ${req.method} ${req.path} ${res.statusCode}${colors.reset} ` +
+        `${colors.dim}(${responseTime}ms)${colors.reset}`,
     );
 
     try {
@@ -101,7 +101,7 @@ app.use((req, res, next) => {
           if (responseKeys.length > 0) {
             console.log(
               `${colors.dim}   Response:${colors.reset} ` +
-              `${colors.white}${JSON.stringify(parsed, null, 2).replace(/\n/g, "\n   ")}${colors.reset}`,
+                `${colors.white}${JSON.stringify(parsed, null, 2).replace(/\n/g, "\n   ")}${colors.reset}`,
             );
           }
         } catch {
@@ -130,14 +130,14 @@ app.use(
 
     console.log(
       `${colors.dim}[${timestamp}]${colors.reset} ` +
-      `${colors.bright}${colors.red}💥 UNHANDLED ERROR:${colors.reset} ` +
-      message,
+        `${colors.bright}${colors.red}💥 UNHANDLED ERROR:${colors.reset} ` +
+        message,
     );
 
     if (error instanceof Error && error.stack) {
       console.log(
         `${colors.dim}   Stack:${colors.reset} ` +
-        `${colors.red}${error.stack.split("\n").slice(0, 3).join("\n   ")}${colors.reset}`,
+          `${colors.red}${error.stack.split("\n").slice(0, 3).join("\n   ")}${colors.reset}`,
       );
     }
 
@@ -164,16 +164,18 @@ const entrySchema = z.object({
   userId: z.string(),
   date: z.string(),
   count: z.number().int().min(1),
-  note: z.string().max(280).nullable().optional(),  // Accepts string or null
-  tags: z.array(z.string().min(1)).max(6).nullable().optional(),  // Accepts array or null
-  imageUrl: z.string().url().nullable().optional(),  // Accepts string or null
+  note: z.string().max(280).nullable().optional(), // Accepts string or null
+  tags: z.array(z.string().min(1)).max(6).nullable().optional(), // Accepts array or null
+  imageUrl: z.string().url().nullable().optional(), // Accepts string or null
 });
 
 const partialEntrySchema = entrySchema.partial();
-const updateSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-}).extend(partialEntrySchema.shape);
+const updateSchema = z
+  .object({
+    id: z.string(),
+    userId: z.string(),
+  })
+  .extend(partialEntrySchema.shape);
 
 const ownerSchema = z.object({
   userId: z.string(),
@@ -202,7 +204,7 @@ const getWeekStart = (isoDate: string) => {
   }
 };
 
-const serializeTags = (tags?: string[]) => {
+const serializeTags = (tags?: string[] | null) => {
   if (!tags || !Array.isArray(tags) || tags.length === 0) {
     return null;
   }
@@ -551,9 +553,9 @@ app.post("/entries", async (req, res) => {
         date: new Date(date),
         weekStart,
         count,
-        note: note || null,  // This handles null properly
-        tags: serializeTags(tags || null),  // This handles null properly
-        imageUrl: imageUrl || null,  // This handles null properly
+        note: note || null, // This handles null properly
+        tags: serializeTags(tags || null), // This handles null properly
+        imageUrl: imageUrl || null, // This handles null properly
       },
     });
 
@@ -732,8 +734,8 @@ app.delete("/entries/:id", async (req, res) => {
 app.use((req, res) => {
   console.log(
     `${colors.dim}[${getTimestamp()}]${colors.reset} ` +
-    `${colors.bright}${colors.yellow}↪ ${req.method} ${req.path} 404${colors.reset} ` +
-    `${colors.dim}(Route not found)${colors.reset}`,
+      `${colors.bright}${colors.yellow}↪ ${req.method} ${req.path} 404${colors.reset} ` +
+      `${colors.dim}(Route not found)${colors.reset}`,
   );
   res.status(404).json({
     error: "Route not found",
