@@ -17,7 +17,9 @@ import EntryForm from "./components/EntryForm";
 import ImageZoom from "./components/ImageZoom";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 
-const API_URL = "https://tally-bibx.onrender.com";
+// const API_URL = "https://tally-bibx.onrender.com";
+const API_URL = "http://localhost:4000";
+
 const STORAGE_KEY = "tally-active-user";
 
 const formatWeek = (value: string) =>
@@ -41,6 +43,9 @@ function AppContent() {
   const [pinValue, setPinValue] = useState("");
   const [unlockedUser, setUnlockedUser] = useState<User | null>(null);
   const [authError, setAuthError] = useState("");
+  const [activeDate, setActiveDate] = useState<string>(
+    new Date().toISOString().split("T")[0],
+  );
 
   const [users, setUsers] = useState<User[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -73,6 +78,22 @@ function AppContent() {
     : "Week of Feb 9";
   const weekNumber = 1;
   const isJudge = activeUserId === "judge";
+
+  const loadEntriesForDate = async (date: string) => {
+    try {
+      const data = await loadEntries(undefined, date);
+      return data;
+    } catch (error) {
+      console.error("Failed to load entries for date:", error);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    if (activeUserId) {
+      loadEntriesForDate(activeDate);
+    }
+  }, [activeDate, activeUserId]);
 
   const handlePinSubmit = () => {
     setAuthError("");
@@ -126,13 +147,18 @@ function AppContent() {
     }
   };
 
-  const loadEntries = async (weekStart?: string) => {
-    const query = weekStart
-      ? `?weekStart=${encodeURIComponent(weekStart)}`
-      : "";
+  const loadEntries = async (weekStart?: string, date?: string) => {
+    let query = "";
+    if (weekStart) {
+      query = `?weekStart=${encodeURIComponent(weekStart)}`;
+    } else if (date) {
+      query = `?date=${encodeURIComponent(date)}`;
+    }
+
     const response = await fetch(`${API_URL}/entries${query}`);
     const data = (await response.json()) as Entry[];
     setEntries(data);
+    return data;
   };
 
   const loadSummary = async (weekStart?: string) => {
@@ -204,9 +230,9 @@ function AppContent() {
         count: Number(entryData.count),
         tags: entryData.tags
           ? entryData.tags
-            .split(",")
-            .map((tag: string) => tag.trim())
-            .filter(Boolean)
+              .split(",")
+              .map((tag: string) => tag.trim())
+              .filter(Boolean)
           : undefined,
         note: entryData.note || undefined,
         imageUrl,
@@ -247,7 +273,7 @@ function AppContent() {
     if (!activeUserId || isJudge) return;
 
     // Find the original entry
-    const originalEntry = entries.find(e => e.id === entryData.id);
+    const originalEntry = entries.find((e) => e.id === entryData.id);
     if (!originalEntry) return;
 
     // Create updated entry for optimistic update
@@ -255,19 +281,20 @@ function AppContent() {
       ...originalEntry,
       count: Number(entryData.count),
       note: entryData.note || null,
-      tags: entryData.tags
-        ?.split(",")
-        .map((t: string) => t.trim())
-        .filter(Boolean) || [],
+      tags:
+        entryData.tags
+          ?.split(",")
+          .map((t: string) => t.trim())
+          .filter(Boolean) || [],
       date: new Date(entryData.date).toISOString(),
       weekStart: weekStartFromDate(entryData.date),
       editedAt: new Date().toISOString(),
     };
 
     // OPTIMISTIC UPDATE: Update entry in state immediately
-    setEntries(prev => prev.map(entry =>
-      entry.id === entryData.id ? updatedEntry : entry
-    ));
+    setEntries((prev) =>
+      prev.map((entry) => (entry.id === entryData.id ? updatedEntry : entry)),
+    );
 
     setIsFormOpen(false);
     setSelectedEntry(null);
@@ -288,19 +315,25 @@ function AppContent() {
         changes.note = entryData.note || null;
       }
 
-      if (entryData.date && new Date(entryData.date).toISOString() !== originalEntry.date) {
+      if (
+        entryData.date &&
+        new Date(entryData.date).toISOString() !== originalEntry.date
+      ) {
         changes.date = new Date(entryData.date).toISOString();
       }
 
       // Handle tags comparison
-      const newTags = entryData.tags
-        ?.split(",")
-        .map((t: string) => t.trim())
-        .filter(Boolean) || [];
+      const newTags =
+        entryData.tags
+          ?.split(",")
+          .map((t: string) => t.trim())
+          .filter(Boolean) || [];
       const originalTags = originalEntry.tags || [];
 
       // Check if tags are different (simple comparison)
-      if (JSON.stringify(newTags.sort()) !== JSON.stringify(originalTags.sort())) {
+      if (
+        JSON.stringify(newTags.sort()) !== JSON.stringify(originalTags.sort())
+      ) {
         changes.tags = newTags;
       }
 
@@ -332,7 +365,8 @@ function AppContent() {
       }
 
       // Only send the request if there are actual changes
-      if (Object.keys(changes).length > 1) { // More than just userId
+      if (Object.keys(changes).length > 1) {
+        // More than just userId
         const response = await fetch(`${API_URL}/entries/${entryData.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -343,9 +377,11 @@ function AppContent() {
           const serverUpdatedEntry = await response.json();
 
           // Update with server response to ensure consistency
-          setEntries(prev => prev.map(entry =>
-            entry.id === entryData.id ? serverUpdatedEntry : entry
-          ));
+          setEntries((prev) =>
+            prev.map((entry) =>
+              entry.id === entryData.id ? serverUpdatedEntry : entry,
+            ),
+          );
 
           // Refresh summary
           loadSummary(selectedWeekStart || undefined);
@@ -361,16 +397,16 @@ function AppContent() {
       }
     } catch (error) {
       // ROLLBACK: Revert optimistic update
-      setEntries(prev => prev.map(entry =>
-        entry.id === entryData.id ? originalEntry : entry
-      ));
+      setEntries((prev) =>
+        prev.map((entry) =>
+          entry.id === entryData.id ? originalEntry : entry,
+        ),
+      );
 
       setIsFormOpen(true);
       addToast("Failed to update entry", "error");
     }
   };
-
-
 
   // OPTIMISTIC DELETE
   const handleDeleteEntry = async (entry: Entry) => {
@@ -537,8 +573,15 @@ function AppContent() {
         <DailyBreakdown
           entries={entries}
           selectedWeekStart={selectedWeekStart}
-          onWeekChange={setSelectedWeekStart}
+          onWeekChange={(weekStart) => {
+            setSelectedWeekStart(weekStart);
+            loadEntries(weekStart);
+          }}
           onEntryClick={setSelectedEntry}
+          onDateSelect={(date) => {
+            setActiveDate(date);
+          }}
+          activeUserId={activeUserId}
         />
 
         <NewEntrySection

@@ -397,7 +397,33 @@ app.post("/users", async (req, res) => {
 app.get("/entries", async (req, res) => {
   try {
     const weekStart = req.query.weekStart as string | undefined;
-    const where = weekStart ? { weekStart: new Date(weekStart) } : {};
+    const date = req.query.date as string | undefined;
+
+    // Build where clause
+    const where: any = {};
+
+    if (weekStart) {
+      where.weekStart = new Date(weekStart);
+    }
+
+    if (date) {
+      // Filter by specific date (YYYY-MM-DD format)
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+
+      where.date = {
+        gte: startDate,
+        lte: endDate,
+      };
+    }
+
+    console.log(
+      `${colors.cyan}📅 Filtering entries with:${colors.reset}`,
+      where,
+    );
 
     const entries = await prisma.entry.findMany({
       where,
