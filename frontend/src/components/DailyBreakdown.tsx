@@ -148,7 +148,7 @@ const FilterToggle = ({
     <div
       className="
         inline-flex items-center rounded-2xl p-1 shadow-sm
-        border border-gray-200 bg-gray-100
+        border border-gray-200 bg-gray-100/80
         dark:border-white/10 dark:bg-white/5 dark:shadow-lg dark:backdrop-blur-sm
       "
     >
@@ -159,15 +159,9 @@ const FilterToggle = ({
         className={`
           rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-200
           ${
-            showAll
-              ? `
-                text-gray-500 hover:text-gray-800
-                dark:text-white/60 dark:hover:text-white/90
-              `
-              : `
-                bg-white text-black shadow-sm
-                dark:bg-gradient-to-r dark:from-white dark:to-white/90 dark:text-black dark:shadow
-              `
+            !showAll
+              ? "bg-white text-black shadow-sm dark:bg-gradient-to-r dark:from-white dark:to-white/90 dark:text-black dark:shadow"
+              : "text-gray-500 hover:text-gray-800 dark:text-white/60 dark:hover:text-white/90"
           }
         `}
       >
@@ -182,14 +176,8 @@ const FilterToggle = ({
           rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-200
           ${
             showAll
-              ? `
-                bg-white text-black shadow-sm
-                dark:bg-gradient-to-r dark:from-white dark:to-white/90 dark:text-black dark:shadow
-              `
-              : `
-                text-gray-500 hover:text-gray-800
-                dark:text-white/60 dark:hover:text-white/90
-              `
+              ? "bg-white text-black shadow-sm dark:bg-gradient-to-r dark:from-white dark:to-white/90 dark:text-black dark:shadow"
+              : "text-gray-500 hover:text-gray-800 dark:text-white/60 dark:hover:text-white/90"
           }
         `}
       >
