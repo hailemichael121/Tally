@@ -62,14 +62,7 @@ export default function ThemeToggle({
           {isDark ? "🌙" : "☀️"}
         </motion.span>
       </div>
-      <span
-        className={clsx(
-          "pointer-events-none mt-2 block text-center text-[10px] font-semibold uppercase tracking-[0.25em]",
-          isDark ? "text-white/70" : "text-black/80",
-        )}
-      >
-        {isDark ? "Dark" : "Light"}
-      </span>
+       
     </motion.button>
   );
 }
