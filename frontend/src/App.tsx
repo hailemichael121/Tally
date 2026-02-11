@@ -80,8 +80,6 @@ function AppContent() {
 
   const isDarkTheme = theme === "dark";
 
-  const [isThemeBursting, setIsThemeBursting] = useState(false);
-
   const activeUser =
     unlockedUser ?? users.find((user) => user.id === activeUserId) ?? null;
   const weekLabel = weeklySummary
@@ -552,21 +550,15 @@ function AppContent() {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
-  const handleThemeToggle = () => {
-    setIsThemeBursting(true);
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-    window.setTimeout(() => setIsThemeBursting(false), 700);
-  };
-
   if (isLoading) {
     return <LoadingSkeleton />;
   }
 
   return (
-    <div className={clsx("app-shell min-h-screen", isThemeBursting && "theme-burst")}>
+    <div className="app-shell min-h-screen">
       <ThemeToggle
         isDark={isDarkTheme}
-        onToggle={handleThemeToggle}
+        onToggle={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
       />
       {!activeUserId && (
         <PinLock
