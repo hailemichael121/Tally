@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import ToastContainer from "./components/ToastContainer";
@@ -137,16 +137,21 @@ function AppContent() {
   const loadAllData = async (_activeUserId?: string) => {
     setIsLoading(true);
     try {
-      const usersResponse = await fetch(`${API_URL}/users`);
-      const usersData = (await usersResponse.json()) as User[];
+      const [usersResponse, entriesResponse, summaryResponse] =
+        await Promise.all([
+          fetch(`${API_URL}/users`),
+          fetch(`${API_URL}/entries`),
+          fetch(`${API_URL}/weekly-summary`),
+        ]);
+
+      const [usersData, entriesData, summaryData] = await Promise.all([
+        usersResponse.json() as Promise<User[]>,
+        entriesResponse.json() as Promise<Entry[]>,
+        summaryResponse.json() as Promise<WeeklySummary>,
+      ]);
+
       setUsers(usersData);
-
-      const entriesResponse = await fetch(`${API_URL}/entries`);
-      const entriesData = (await entriesResponse.json()) as Entry[];
       setEntries(entriesData);
-
-      const summaryResponse = await fetch(`${API_URL}/weekly-summary`);
-      const summaryData = (await summaryResponse.json()) as WeeklySummary;
       setWeeklySummary(summaryData);
     } catch (error) {
       console.error("Failed to load data:", error);

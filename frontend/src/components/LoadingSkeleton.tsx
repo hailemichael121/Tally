@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 
 export default function LoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-ink text-white">
+    <div className="app-shell min-h-screen">
       <div className="mx-auto w-full max-w-5xl px-4 pb-24 pt-10 sm:px-8">
         {/* Header Skeleton */}
         <motion.div

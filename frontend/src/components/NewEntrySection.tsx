@@ -11,7 +11,7 @@ export default function NewEntrySection({
 }: NewEntrySectionProps) {
   return (
     <section id="new" className="glass-card rounded-3xl p-6 shadow-soft">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">
             Add entry
@@ -21,7 +21,7 @@ export default function NewEntrySection({
         <button
           onClick={onNewEntry}
           disabled={!activeUserId || isJudge}
-          className="rounded-2xl bg-cocoa px-6 py-3 text-sm font-semibold text-mist transition-colors hover:bg-cocoa/80 disabled:cursor-not-allowed disabled:opacity-40"
+          className="theme-btn-primary w-full rounded-2xl px-6 py-3 text-sm font-semibold transition-colors sm:w-auto disabled:cursor-not-allowed disabled:opacity-40"
         >
           Add Entry
         </button>

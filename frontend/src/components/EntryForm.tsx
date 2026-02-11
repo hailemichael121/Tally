@@ -42,7 +42,7 @@ export default function EntryForm({
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-md"
+      className="theme-backdrop fixed inset-0 z-50 flex items-center justify-center"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -53,7 +53,7 @@ export default function EntryForm({
         className="glass-card w-[90%] max-w-md max-h-[85vh] overflow-y-auto rounded-3xl p-6 shadow-soft"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between border border-white/10 rounded-2xl px-4 py-3 bg-ink backdrop-blur-sm">
+        <div className="theme-panel flex items-start justify-between rounded-2xl border border-white/10 px-4 py-3 backdrop-blur-sm">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">
               {formState.id ? "Edit Entry" : "New Entry"}
@@ -195,7 +195,7 @@ export default function EntryForm({
             disabled={
               isSubmitting || !formState.count || !activeUser || isJudge
             }
-            className="w-full rounded-2xl bg-cocoa px-6 py-3 text-sm font-semibold text-mist transition-colors hover:bg-cocoa/80 disabled:cursor-not-allowed disabled:opacity-40"
+            className="theme-btn-primary w-full rounded-2xl px-6 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isSubmitting
               ? "Saving..."
