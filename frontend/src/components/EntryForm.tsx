@@ -42,7 +42,7 @@ export default function EntryForm({
 
   return (
     <motion.div
-      className="theme-backdrop fixed inset-0 z-50 flex items-center justify-center"
+      className="theme-backdrop fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center sm:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -50,10 +50,10 @@ export default function EntryForm({
     >
       <form
         onSubmit={handleSubmit}
-        className="glass-card w-[90%] max-w-md max-h-[85vh] overflow-y-auto rounded-3xl p-6 shadow-soft"
+        className="glass-card w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl p-4 shadow-soft sm:max-h-[88vh] sm:p-6"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="theme-panel flex items-start justify-between rounded-2xl border border-white/10 px-4 py-3 backdrop-blur-sm">
+        <div className="theme-panel flex items-start justify-between rounded-2xl border border-white/10 px-3 py-3 backdrop-blur-sm sm:px-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">
               {formState.id ? "Edit Entry" : "New Entry"}
@@ -72,23 +72,42 @@ export default function EntryForm({
           </button>
         </div>
 
-        <div className="mt-6 space-y-4">
-          <div>
-            <label className="mb-2 block text-xs text-white/60">Count *</label>
-            <input
-              className="soft-input w-full"
-              type="number"
-              min={1}
-              required
-              value={formState.count}
-              onChange={(event) =>
-                setFormState((prev: any) => ({
-                  ...prev,
-                  count: event.target.value,
-                }))
-              }
-              disabled={isSubmitting}
-            />
+        <div className="mt-5 space-y-4 sm:mt-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-xs text-white/60">Count *</label>
+              <input
+                className="soft-input w-full text-sm"
+                type="number"
+                min={1}
+                required
+                value={formState.count}
+                onChange={(event) =>
+                  setFormState((prev: any) => ({
+                    ...prev,
+                    count: event.target.value,
+                  }))
+                }
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs text-white/60">Date *</label>
+              <input
+                className="soft-input w-full text-sm"
+                type="date"
+                required
+                value={formState.date}
+                onChange={(event) =>
+                  setFormState((prev: any) => ({
+                    ...prev,
+                    date: event.target.value,
+                  }))
+                }
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
 
           <div>
@@ -96,7 +115,7 @@ export default function EntryForm({
               Name (optional)
             </label>
             <input
-              className="soft-input w-full"
+              className="soft-input w-full text-sm"
               placeholder="Add names if you got"
               value={formState.tags}
               onChange={(event) =>
@@ -113,8 +132,8 @@ export default function EntryForm({
           <div>
             <label className="mb-2 block text-xs text-white/60">Note</label>
             <textarea
-              className="soft-input w-full"
-              rows={3}
+              className="soft-input w-full text-sm"
+              rows={4}
               placeholder="eshi mastebabeya alesh ee kebatri for her • mastebabeya alek ee kebatra"
               value={formState.note}
               onChange={(event) =>
@@ -130,7 +149,7 @@ export default function EntryForm({
           <div>
             <label className="mb-2 block text-xs text-white/60">Image</label>
             <input
-              className="soft-input w-full"
+              className="soft-input w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-white/15 file:px-3 file:py-2 file:text-xs file:font-medium file:text-inherit"
               type="file"
               accept="image/*"
               onChange={(event) =>
@@ -150,7 +169,7 @@ export default function EntryForm({
                 <img
                   src={displayImageUrl}
                   alt="preview"
-                  className="h-36 w-full rounded-2xl border border-white/10 object-cover"
+                  className="h-40 w-full rounded-2xl border border-white/10 object-cover sm:h-44"
                 />
                 {formState.id && formState.imageUrl && !formState.imageFile && (
                   <button
@@ -171,25 +190,9 @@ export default function EntryForm({
             )}
           </div>
 
-          <div>
-            <label className="mb-2 block text-xs text-white/60">Date *</label>
-            <input
-              className="soft-input w-full"
-              type="date"
-              required
-              value={formState.date}
-              onChange={(event) =>
-                setFormState((prev: any) => ({
-                  ...prev,
-                  date: event.target.value,
-                }))
-              }
-              disabled={isSubmitting}
-            />
-          </div>
         </div>
 
-        <div className="mt-8 pb-4">
+        <div className="mt-6 pb-2 sm:mt-8 sm:pb-4">
           <button
             type="submit"
             disabled={

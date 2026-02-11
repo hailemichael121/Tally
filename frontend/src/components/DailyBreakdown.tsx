@@ -145,36 +145,29 @@ const FilterToggle = ({
   onToggle: (showAll: boolean) => void;
 }) => {
   return (
-    <div className="flex items-center gap-2">
-      <span
-        className={`text-xs font-medium transition-colors ${showAll ? "text-white/60" : "text-white"}`}
+    <div className="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 p-1 shadow-lg backdrop-blur-sm">
+      <button
+        type="button"
+        onClick={() => onToggle(false)}
+        className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+          showAll
+            ? "text-white/60 hover:text-white/90"
+            : "bg-gradient-to-r from-white to-white/90 text-black shadow"
+        }`}
       >
         Mine
-      </span>
-      <button
-        onClick={() => onToggle(!showAll)}
-        className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-white/30"
-        style={{
-          backgroundColor: showAll
-            ? "rgba(255, 255, 255, 0.15)"
-            : "rgba(255, 255, 255, 0.1)",
-        }}
-      >
-        <span className="sr-only">Toggle filter</span>
-        <span
-          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${showAll ? "translate-x-5" : "translate-x-1"}`}
-          style={{
-            boxShadow: showAll
-              ? "0 2px 8px rgba(255, 255, 255, 0.3)"
-              : "0 2px 4px rgba(0, 0, 0, 0.2)",
-          }}
-        />
       </button>
-      <span
-        className={`text-xs font-medium transition-colors ${showAll ? "text-white" : "text-white/60"}`}
+      <button
+        type="button"
+        onClick={() => onToggle(true)}
+        className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+          showAll
+            ? "bg-gradient-to-r from-white to-white/90 text-black shadow"
+            : "text-white/60 hover:text-white/90"
+        }`}
       >
         All
-      </span>
+      </button>
     </div>
   );
 };
@@ -290,7 +283,7 @@ export default function DailyBreakdown({
   };
 
   return (
-    <section className="glass-card rounded-2xl p-4 md:p-5 border border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md">
+    <section className="glass-card relative rounded-2xl p-4 md:p-5 border border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md">
       {/* Week Header - Mobile Responsive */}
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <button
