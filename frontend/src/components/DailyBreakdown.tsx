@@ -145,26 +145,53 @@ const FilterToggle = ({
   onToggle: (showAll: boolean) => void;
 }) => {
   return (
-    <div className="inline-flex items-center rounded-2xl border border-white/10 bg-white/5 p-1 shadow-lg backdrop-blur-sm">
+    <div
+      className="
+        inline-flex items-center rounded-2xl p-1 shadow-sm
+        border border-gray-200 bg-gray-100
+        dark:border-white/10 dark:bg-white/5 dark:shadow-lg dark:backdrop-blur-sm
+      "
+    >
+      {/* Mine */}
       <button
         type="button"
         onClick={() => onToggle(false)}
-        className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
-          showAll
-            ? "text-white/60 hover:text-white/90"
-            : "bg-gradient-to-r from-white to-white/90 text-black shadow"
-        }`}
+        className={`
+          rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-200
+          ${
+            showAll
+              ? `
+                text-gray-500 hover:text-gray-800
+                dark:text-white/60 dark:hover:text-white/90
+              `
+              : `
+                bg-white text-black shadow-sm
+                dark:bg-gradient-to-r dark:from-white dark:to-white/90 dark:text-black dark:shadow
+              `
+          }
+        `}
       >
         Mine
       </button>
+
+      {/* All */}
       <button
         type="button"
         onClick={() => onToggle(true)}
-        className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
-          showAll
-            ? "bg-gradient-to-r from-white to-white/90 text-black shadow"
-            : "text-white/60 hover:text-white/90"
-        }`}
+        className={`
+          rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-200
+          ${
+            showAll
+              ? `
+                bg-white text-black shadow-sm
+                dark:bg-gradient-to-r dark:from-white dark:to-white/90 dark:text-black dark:shadow
+              `
+              : `
+                text-gray-500 hover:text-gray-800
+                dark:text-white/60 dark:hover:text-white/90
+              `
+          }
+        `}
       >
         All
       </button>
