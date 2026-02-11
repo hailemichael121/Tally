@@ -30,7 +30,7 @@ export default function PinLock({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/90 backdrop-blur-md">
+    <div className="theme-backdrop fixed inset-0 z-50 flex items-center justify-center">
       <div className="glass-card w-[90%] max-w-sm rounded-3xl p-8 shadow-2xl">
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -75,13 +75,13 @@ export default function PinLock({
         <button
           onClick={onPinSubmit}
           disabled={pinValue.length !== 4}
-          className="mt-8 w-full rounded-2xl bg-blush/80 py-4 text-sm font-semibold text-ink shadow-floaty transition-all disabled:cursor-not-allowed disabled:opacity-40"
+          className="theme-btn-primary mt-8 w-full rounded-2xl py-4 text-sm font-semibold shadow-floaty transition-all disabled:cursor-not-allowed disabled:opacity-40"
         >
           Unlock
         </button>
 
         <p className="mt-4 text-center text-xs text-white/40">
-          Press <kbd className="px-2 py-1 rounded bg-white/10">Enter</kbd> to
+          Press <kbd className="theme-panel rounded px-2 py-1">Enter</kbd> to
           submit
         </p>
       </div>

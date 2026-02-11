@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import ToastContainer from "./components/ToastContainer";
@@ -16,11 +16,13 @@ import EntryModal from "./components/EntryModal";
 import EntryForm from "./components/EntryForm";
 import ImageZoom from "./components/ImageZoom";
 import LoadingSkeleton from "./components/LoadingSkeleton";
+import ThemeToggle from "./components/ThemeToggle";
 
 const API_URL = "https://tally-bibx.onrender.com";
 // const API_URL = "http://localhost:4000";
 
 const STORAGE_KEY = "tally-active-user";
+const THEME_STORAGE_KEY = "tally-theme";
 
 const formatWeek = (value: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -70,6 +72,15 @@ function AppContent() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">(
+    () =>
+      (localStorage.getItem(THEME_STORAGE_KEY) as "light" | "dark") ||
+      "light",
+  );
+
+  const isDarkTheme = theme === "dark";
+
+  const [isThemeBursting, setIsThemeBursting] = useState(false);
 
   const activeUser =
     unlockedUser ?? users.find((user) => user.id === activeUserId) ?? null;
@@ -128,16 +139,21 @@ function AppContent() {
   const loadAllData = async (_activeUserId?: string) => {
     setIsLoading(true);
     try {
-      const usersResponse = await fetch(`${API_URL}/users`);
-      const usersData = (await usersResponse.json()) as User[];
+      const [usersResponse, entriesResponse, summaryResponse] =
+        await Promise.all([
+          fetch(`${API_URL}/users`),
+          fetch(`${API_URL}/entries`),
+          fetch(`${API_URL}/weekly-summary`),
+        ]);
+
+      const [usersData, entriesData, summaryData] = await Promise.all([
+        usersResponse.json() as Promise<User[]>,
+        entriesResponse.json() as Promise<Entry[]>,
+        summaryResponse.json() as Promise<WeeklySummary>,
+      ]);
+
       setUsers(usersData);
-
-      const entriesResponse = await fetch(`${API_URL}/entries`);
-      const entriesData = (await entriesResponse.json()) as Entry[];
       setEntries(entriesData);
-
-      const summaryResponse = await fetch(`${API_URL}/weekly-summary`);
-      const summaryData = (await summaryResponse.json()) as WeeklySummary;
       setWeeklySummary(summaryData);
     } catch (error) {
       console.error("Failed to load data:", error);
@@ -530,12 +546,28 @@ function AppContent() {
     }
   }, [selectedWeekStart, activeUserId]);
 
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const handleThemeToggle = () => {
+    setIsThemeBursting(true);
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+    window.setTimeout(() => setIsThemeBursting(false), 700);
+  };
+
   if (isLoading) {
     return <LoadingSkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-ink text-white">
+    <div className={clsx("app-shell min-h-screen", isThemeBursting && "theme-burst")}>
+      <ThemeToggle
+        isDark={isDarkTheme}
+        onToggle={handleThemeToggle}
+      />
       {!activeUserId && (
         <PinLock
           pinValue={pinValue}
