@@ -30,7 +30,7 @@ export default function Header({
 
           <div>
             <h1 className="mt-1 text-3xl font-semibold text-mist sm:mt-2">
-              ፉክክር ቤት
+              የፉክክር ቤት
             </h1>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/60">
