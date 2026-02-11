@@ -17,6 +17,8 @@
   --app-border: rgba(0, 0, 0, 0.5);
   --app-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
   --app-muted-bg: rgba(255, 255, 255, 0.6);
+  --app-placeholder: rgba(17, 17, 17, 0.56);
+  --app-overlay: rgba(248, 243, 232, 0.55);
 }
 
 :root[data-theme="dark"] {
@@ -27,6 +29,8 @@
   --app-border: rgba(255, 255, 255, 0.15);
   --app-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
   --app-muted-bg: rgba(255, 255, 255, 0.12);
+  --app-placeholder: rgba(247, 244, 239, 0.55);
+  --app-overlay: rgba(10, 10, 10, 0.58);
 }
 
 body {
@@ -52,6 +56,28 @@ body {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
   color: var(--app-text);
+  min-height: 2.75rem;
+  width: 100%;
+  padding: 0.75rem 0.95rem;
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    background-color 200ms ease;
+}
+
+.soft-input::placeholder {
+  color: var(--app-placeholder);
+}
+
+.soft-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--app-text) 25%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-text) 14%, transparent);
+}
+
+.theme-backdrop {
+  background: var(--app-overlay);
+  backdrop-filter: blur(14px);
 }
 
 :root[data-theme="light"] [class*="text-white"] {

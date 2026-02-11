@@ -21,10 +21,14 @@ export default function NewEntrySection({
         <button
           onClick={onNewEntry}
           disabled={!activeUserId || isJudge}
-          className="theme-btn-primary w-full rounded-2xl px-6 py-3 text-sm font-semibold transition-colors sm:w-auto disabled:cursor-not-allowed disabled:opacity-40"
+          className="theme-btn-primary group w-full rounded-2xl px-6 py-3 text-sm font-semibold transition-all duration-200 sm:w-auto disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Add Entry
+          <span className="inline-flex items-center gap-2">
+            <span className="text-base leading-none transition-transform group-hover:scale-110">＋</span>
+            Add Entry
+          </span>
         </button>
+
       </div>
     </section>
   );
