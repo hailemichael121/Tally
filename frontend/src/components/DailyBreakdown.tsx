@@ -148,11 +148,13 @@ const FilterToggle = ({
     <div
       className="
         inline-flex items-center rounded-2xl p-1 shadow-sm
-        border border-gray-200 bg-gray-100/80
+        /* Light Mode: Darker gray background with a clear border */
+        border border-gray-300 bg-gray-200/50 
+        /* Dark Mode: Stays glassmorphic */
         dark:border-white/10 dark:bg-white/5 dark:shadow-lg dark:backdrop-blur-sm
       "
     >
-      {/* Mine */}
+      {/* Mine Button */}
       <button
         type="button"
         onClick={() => onToggle(false)}
@@ -160,15 +162,24 @@ const FilterToggle = ({
           rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-200
           ${
             !showAll
-              ? "bg-white text-black shadow-sm dark:bg-gradient-to-r dark:from-white dark:to-white/90 dark:text-black dark:shadow"
-              : "text-gray-500 hover:text-gray-800 dark:text-white/60 dark:hover:text-white/90"
+              ? `
+                /* Light Mode Active: White with a clear outline */
+                bg-white text-black border border-gray-300 shadow-sm
+                /* Dark Mode Active */
+                dark:border-transparent dark:bg-gradient-to-r dark:from-white dark:to-white/90 dark:text-black
+              `
+              : `
+                /* Inactive State */
+                text-gray-500 hover:text-gray-800 border border-transparent
+                dark:text-white/60 dark:hover:text-white/90
+              `
           }
         `}
       >
         Mine
       </button>
 
-      {/* All */}
+      {/* All Button */}
       <button
         type="button"
         onClick={() => onToggle(true)}
@@ -176,8 +187,17 @@ const FilterToggle = ({
           rounded-xl px-3 py-1.5 text-xs font-semibold transition-all duration-200
           ${
             showAll
-              ? "bg-white text-black shadow-sm dark:bg-gradient-to-r dark:from-white dark:to-white/90 dark:text-black dark:shadow"
-              : "text-gray-500 hover:text-gray-800 dark:text-white/60 dark:hover:text-white/90"
+              ? `
+                /* Light Mode Active: White with a clear outline */
+                bg-white text-black border border-gray-300 shadow-sm
+                /* Dark Mode Active */
+                dark:border-transparent dark:bg-gradient-to-r dark:from-white dark:to-white/90 dark:text-black
+              `
+              : `
+                /* Inactive State */
+                text-gray-500 hover:text-gray-800 border border-transparent
+                dark:text-white/60 dark:hover:text-white/90
+              `
           }
         `}
       >
