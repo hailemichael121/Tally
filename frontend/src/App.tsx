@@ -16,11 +16,13 @@ import EntryModal from "./components/EntryModal";
 import EntryForm from "./components/EntryForm";
 import ImageZoom from "./components/ImageZoom";
 import LoadingSkeleton from "./components/LoadingSkeleton";
+import ThemeToggle from "./components/ThemeToggle";
 
 const API_URL = "https://tally-bibx.onrender.com";
 // const API_URL = "http://localhost:4000";
 
 const STORAGE_KEY = "tally-active-user";
+const THEME_STORAGE_KEY = "tally-theme";
 
 const formatWeek = (value: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -70,6 +72,13 @@ function AppContent() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">(
+    () =>
+      (localStorage.getItem(THEME_STORAGE_KEY) as "light" | "dark") ||
+      "light",
+  );
+
+  const isDarkTheme = theme === "dark";
 
   const activeUser =
     unlockedUser ?? users.find((user) => user.id === activeUserId) ?? null;
@@ -530,12 +539,22 @@ function AppContent() {
     }
   }, [selectedWeekStart, activeUserId]);
 
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
   if (isLoading) {
     return <LoadingSkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-ink text-white">
+    <div className="app-shell min-h-screen">
+      <ThemeToggle
+        isDark={isDarkTheme}
+        onToggle={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+      />
       {!activeUserId && (
         <PinLock
           pinValue={pinValue}
