@@ -524,18 +524,12 @@ function AppContent() {
           </SmartSkeleton>
         </main>
 
-        <SmartSkeleton
-          loadingKey={isLoading("users") || isLoading("entries") ? "any" : ""}
-          skeleton={<BottomNavSkeleton />}
-          delay={200}
-        >
-          <BottomNav
-            activeTab={activeTab}
-            onTabChange={handleTab}
-            onNewEntry={openNewEntry}
-            canCreateEntry={Boolean(activeUserId) && !isJudge}
-          />
-        </SmartSkeleton>
+        <BottomNav
+          activeTab={activeTab}
+          onTabChange={handleTab}
+          onNewEntry={openNewEntry}
+          canCreateEntry={Boolean(activeUserId) && !isJudge}
+        />
 
         <AnimatePresence>
           {selectedEntry && (

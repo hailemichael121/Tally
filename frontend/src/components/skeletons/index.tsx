@@ -332,7 +332,7 @@ export function FullPageSkeleton() {
           <DailyBreakdownSkeleton />
         </div>
       </div>
-      {/* Use the simplified version to ensure centering */}
+      {/* BottomNav is always present, no conditional rendering */}
       <BottomNavSkeleton />
     </div>
   );
