@@ -21,7 +21,7 @@ export default function WeeklyTotals({
   const displayTotals = displayUsers.map((user) => ({
     user,
     total: weeklySummary ? (weeklySummary.totals[user.id] ?? 0) : 0,
-    accent: user.id === activeUserId ? "text-blush" : "text-cocoa",
+    accent: user.id === activeUserId ? "text-white" : "text-cocoa",
   }));
 
   return (
@@ -36,7 +36,7 @@ export default function WeeklyTotals({
             key={user.id}
             className={clsx(
               "rounded-3xl border bg-white/5 p-4 transition-colors hover:bg-white/10",
-              user.id === activeUserId ? "border-blush/40" : "border-white/10",
+              user.id === activeUserId ? "border-white/40" : "border-white/10",
             )}
           >
             <div className="flex items-center justify-between">

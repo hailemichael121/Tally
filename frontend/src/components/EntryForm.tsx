@@ -75,7 +75,9 @@ export default function EntryForm({
         <div className="mt-5 space-y-4 sm:mt-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-2 block text-xs text-white/60">Count *</label>
+              <label className="mb-2 block text-xs text-white/60">
+                Count *
+              </label>
               <input
                 className="soft-input w-full text-sm"
                 type="number"
@@ -126,15 +128,16 @@ export default function EntryForm({
               }
               disabled={isSubmitting}
             />
-            <p className="mt-2 text-[11px] text-white/40">Not essential.</p>
           </div>
 
           <div>
-            <label className="mb-2 block text-xs text-white/60">Note</label>
+            <label className="mb-2 block text-xs text-white/60">
+              Note (optional)
+            </label>
             <textarea
               className="soft-input w-full text-sm"
               rows={4}
-              placeholder="eshi mastebabeya alesh ee kebatri for her • mastebabeya alek ee kebatra"
+              placeholder="eshi mastebabeya alesh ee    "
               value={formState.note}
               onChange={(event) =>
                 setFormState((prev: any) => ({
@@ -147,7 +150,9 @@ export default function EntryForm({
           </div>
 
           <div>
-            <label className="mb-2 block text-xs text-white/60">Image</label>
+            <label className="mb-2 block text-xs text-white/60">
+              Image (optional)
+            </label>
             <input
               className="soft-input w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-white/15 file:px-3 file:py-2 file:text-xs file:font-medium file:text-inherit"
               type="file"
@@ -164,7 +169,9 @@ export default function EntryForm({
             {displayImageUrl && (
               <div className="mt-3">
                 <p className="mb-2 text-xs text-white/50">
-                  {formState.imageFile ? "New image preview:" : "Current image:"}
+                  {formState.imageFile
+                    ? "New image preview:"
+                    : "Current image:"}
                 </p>
                 <img
                   src={displayImageUrl}
@@ -189,7 +196,6 @@ export default function EntryForm({
               </div>
             )}
           </div>
-
         </div>
 
         <div className="mt-6 pb-2 sm:mt-8 sm:pb-4">

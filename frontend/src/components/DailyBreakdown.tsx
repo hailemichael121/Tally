@@ -1,5 +1,5 @@
 import { Entry } from "../types";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Users, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface DailyBreakdownProps {
@@ -128,14 +128,6 @@ const EntrySkeleton = () => (
   </div>
 );
 
-const EmptyStateSkeleton = () => (
-  <div className="flex flex-col items-center justify-center text-center p-8 animate-pulse">
-    <div className="w-12 h-12 rounded-full bg-white/5 mb-3"></div>
-    <div className="w-24 h-3 rounded-full bg-white/10 mb-2"></div>
-    <div className="w-40 h-2.5 rounded-full bg-white/5"></div>
-  </div>
-);
-
 // Modern toggle switch component
 const FilterToggle = ({
   showAll,
@@ -218,8 +210,29 @@ export default function DailyBreakdown({
   const [activeDate, setActiveDate] = useState<string>(getLocalDateKey());
   const [isLoading, setIsLoading] = useState(false);
   const [isChangingDate, setIsChangingDate] = useState(false);
-  const [showAllEntries, setShowAllEntries] = useState(false); // Default to false (show only mine)
+  const [showAllEntries, setShowAllEntries] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const dateRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  useEffect(() => {
+    const activeEl = dateRefs.current[activeDate];
+    const container = scrollRef.current;
 
+    if (activeEl && container) {
+      const containerRect = container.getBoundingClientRect();
+      const elRect = activeEl.getBoundingClientRect();
+
+      const offset =
+        elRect.left -
+        containerRect.left -
+        containerRect.width / 2 +
+        elRect.width / 2;
+
+      container.scrollBy({
+        left: offset,
+        behavior: "smooth",
+      });
+    }
+  }, [activeDate]);
   const currentWeekStart =
     selectedWeekStart || weekStartFromDate(new Date().toISOString());
   const weekDays = useMemo(
@@ -318,134 +331,182 @@ export default function DailyBreakdown({
   };
 
   return (
-    <section className="glass-card relative rounded-2xl p-4 md:p-5 border border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-md">
+    <section
+      id="history"
+      className="glass-card relative rounded-2xl border border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02] p-4 backdrop-blur-md md:p-5"
+    >
+      {" "}
       {/* Week Header - Mobile Responsive */}
-      <div className="flex items-center justify-between mb-4 md:mb-6">
-        <button
-          onClick={() => handleWeekChange("prev")}
-          disabled={isLoading}
-          className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+      <div className="relative mb-4 md:mb-6">
+        <div
+          className="
+    flex items-center justify-between 
+    gap-2 sm:gap-4 
+    px-1 sm:px-0
+  "
         >
-          <ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
-        </button>
+          {/* Prev button – fixed size, never shrinks too much */}
+          <button
+            onClick={() => handleWeekChange("prev")}
+            disabled={isLoading}
+            className="
+        flex-shrink-0 p-2 sm:p-2.5 
+        hover:bg-white/10 rounded-lg transition-colors 
+        text-white/70 hover:text-white 
+        disabled:opacity-40 disabled:cursor-not-allowed
+        min-w-[40px] min-h-[40px] flex items-center justify-center
+      "
+            aria-label="Previous week"
+          >
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
 
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-1.5 md:gap-2 text-xs md:text-sm text-white/60 mb-1">
-            <Calendar className="w-3 h-3 md:w-3.5 md:h-3.5" />
-            <span>{formatMonthYear(getDisplayDate(activeDate))}</span>
-          </div>
+          {/* Center content – takes available space */}
+          <div className="flex-1 min-w-0 flex flex-col items-center">
+            {/* Month & year */}
+            <div
+              className="
+        flex items-center justify-center gap-1.5 text-xs sm:text-sm 
+        text-white/60 mb-2 sm:mb-2.5
+      "
+            >
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="font-medium">
+                {formatMonthYear(getDisplayDate(activeDate))}
+              </span>
+            </div>
 
-          {/* Desktop Date Grid */}
-          <div className="hidden md:flex items-center justify-center gap-2 md:gap-3">
-            {isLoading
-              ? // Loading skeleton for dates
-                Array.from({ length: 7 }).map((_, i) => (
-                  <DateSkeleton key={i} />
-                ))
-              : weekDays.map((date) => {
-                  const dateStr = formatDateKey(date.toISOString());
-                  const isActive = activeDate === dateStr;
-                  const isToday = dateStr === todayStr;
-                  const hasData = !!groupedEntries[dateStr]?.length;
+            {/* ─── Desktop date grid ─── */}
+            <div className="hidden md:flex items-center justify-center gap-2 lg:gap-3">
+              {isLoading
+                ? Array.from({ length: 7 }).map((_, i) => (
+                    <DateSkeleton key={i} />
+                  ))
+                : weekDays.map((date) => {
+                    const dateStr = formatDateKey(date.toISOString());
+                    const isActive = activeDate === dateStr;
+                    const isToday = dateStr === todayStr;
+                    const hasData = !!groupedEntries[dateStr]?.length;
 
-                  return (
-                    <button
-                      key={dateStr}
-                      onClick={() => handleDateSelect(dateStr)}
-                      disabled={isChangingDate}
-                      className={`
-                      flex flex-col items-center justify-center w-10 h-12 md:w-11 md:h-14 rounded-xl transition-all duration-300 relative
-                      disabled:opacity-50 disabled:cursor-not-allowed
+                    return (
+                      <button
+                        key={dateStr}
+                        onClick={() => handleDateSelect(dateStr)}
+                        disabled={isChangingDate}
+                        className={`
+                    flex flex-col items-center justify-center 
+                    w-11 h-14 rounded-xl transition-all duration-300 relative
+                    ${
+                      isActive
+                        ? "bg-gradient-to-br from-white to-white/90 text-black shadow-lg scale-105"
+                        : "hover:bg-white/10 text-white/70"
+                    }
+                    ${isToday && !isActive ? "border border-white/25" : ""}
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                  `}
+                      >
+                        <span
+                          className={`text-xs font-medium ${isActive ? "text-black/70" : "text-white/50"}`}
+                        >
+                          {formatDayName(date)}
+                        </span>
+                        <span className="text-lg font-semibold mt-0.5">
+                          {formatDayNum(date)}
+                        </span>
+                        {isToday && !isActive && (
+                          <div className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-white/80" />
+                        )}
+                        {hasData && !isActive && (
+                          <div className="absolute -bottom-1.5 w-2 h-2 rounded-full bg-white/50" />
+                        )}
+                      </button>
+                    );
+                  })}
+            </div>
+
+            {/* ─── Mobile scrollable date strip ─── */}
+
+            <div
+              ref={scrollRef}
+              className="
+    md:hidden w-full 
+    overflow-x-auto scrollbar-hide 
+    -mx-1 px-1
+    scroll-smooth snap-x snap-mandatory
+  "
+            >
+              <div
+                className="
+          inline-flex items-center gap-2 sm:gap-3 
+          py-1 min-w-full justify-start
+        "
+              >
+                {isLoading
+                  ? Array.from({ length: 7 }).map((_, i) => (
+                      <div key={i} className="flex-shrink-0">
+                        <DateSkeleton />
+                      </div>
+                    ))
+                  : weekDays.map((date) => {
+                      const dateStr = formatDateKey(date.toISOString());
+                      const isActive = activeDate === dateStr;
+                      const isToday = dateStr === todayStr;
+
+                      return (
+                        <button
+                          key={dateStr}
+                          onClick={() => handleDateSelect(dateStr)}
+                          ref={(el) => (dateRefs.current[dateStr] = el)}
+                          disabled={isChangingDate}
+                          className={`
+                      flex-shrink-0 flex flex-col items-center justify-center 
+                      w-12 h-11 rounded-xl transition-all duration-300 relative
+                      snap-center
                       ${
                         isActive
                           ? "bg-gradient-to-br from-white to-white/90 text-black shadow-lg scale-105"
-                          : "hover:bg-white/10 text-white/70"
+                          : "hover:bg-white/10 text-white/70 active:bg-white/15"
                       }
-                      ${isToday && !isActive ? "border border-white/20" : ""}
+                      ${isToday && !isActive ? "border-2 border-white/30" : "border border-transparent"}
+                      disabled:opacity-50
                     `}
-                    >
-                      <span
-                        className={`text-[10px] md:text-xs font-medium ${isActive ? "text-black/60" : "text-white/50"}`}
-                      >
-                        {formatDayName(date)}
-                      </span>
-                      <span className="text-base md:text-lg font-semibold mt-0.5">
-                        {formatDayNum(date)}
-                      </span>
+                        >
+                          <span
+                            className={`text-[10px] font-medium ${isActive ? "text-black/70" : "text-white/50"}`}
+                          >
+                            {formatDayName(date)}
+                          </span>
+                          <span className="text-base font-semibold mt-0.5">
+                            {formatDayNum(date)}
+                          </span>
 
-                      {/* Today indicator */}
-                      {isToday && !isActive && (
-                        <div className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-blush/80" />
-                      )}
-
-                      {/* Dot indicator for data */}
-                      {hasData && !isActive && (
-                        <div className="absolute -bottom-1.5 w-2 h-2 rounded-full bg-white/40"></div>
-                      )}
-                    </button>
-                  );
-                })}
+                          {isToday && !isActive && (
+                            <div className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-white/80" />
+                          )}
+                        </button>
+                      );
+                    })}
+              </div>
+            </div>
           </div>
 
-          {/* Mobile Date Grid (Smaller, Horizontal Scroll) */}
-          <div className="md:hidden flex items-center justify-center gap-1.5 overflow-x-auto pb-2 px-2">
-            {isLoading
-              ? // Mobile loading skeleton
-                Array.from({ length: 7 }).map((_, i) => (
-                  <div key={i} className="flex-shrink-0">
-                    <DateSkeleton />
-                  </div>
-                ))
-              : weekDays.map((date) => {
-                  const dateStr = formatDateKey(date.toISOString());
-                  const isActive = activeDate === dateStr;
-                  const isToday = dateStr === todayStr;
-                  const hasData = !!groupedEntries[dateStr]?.length;
-
-                  return (
-                    <button
-                      key={dateStr}
-                      onClick={() => handleDateSelect(dateStr)}
-                      disabled={isChangingDate}
-                      className={`
-                      flex-shrink-0 flex flex-col items-center justify-center w-9 h-10 rounded-lg transition-all duration-300 relative
-                      disabled:opacity-50 disabled:cursor-not-allowed
-                      ${
-                        isActive
-                          ? "bg-gradient-to-br from-white to-white/90 text-black shadow-lg scale-105"
-                          : "hover:bg-white/10 text-white/70"
-                      }
-                      ${isToday && !isActive ? "border border-white/20" : ""}
-                    `}
-                    >
-                      <span
-                        className={`text-[9px] font-medium ${isActive ? "text-black/60" : "text-white/50"}`}
-                      >
-                        {formatDayName(date)}
-                      </span>
-                      <span className="text-sm font-semibold mt-0.5">
-                        {formatDayNum(date)}
-                      </span>
-
-                      {/* Today indicator for mobile */}
-                      {isToday && !isActive && (
-                        <div className="absolute -top-0.5 -right-0.5 w-1 h-1 rounded-full bg-blush/80" />
-                      )}
-                    </button>
-                  );
-                })}
-          </div>
+          {/* Next button */}
+          <button
+            onClick={() => handleWeekChange("next")}
+            disabled={isLoading}
+            className="
+        flex-shrink-0 p-2 sm:p-2.5 
+        hover:bg-white/10 rounded-lg transition-colors 
+        text-white/70 hover:text-white 
+        disabled:opacity-40 disabled:cursor-not-allowed
+        min-w-[40px] min-h-[40px] flex items-center justify-center
+      "
+            aria-label="Next week"
+          >
+            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
         </div>
-
-        <button
-          onClick={() => handleWeekChange("next")}
-          disabled={isLoading}
-          className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
-        </button>
       </div>
-
       {/* Selected Date Header with Filter Toggle */}
       <div className="flex items-center justify-between mb-4 md:mb-5 px-1">
         <div className="flex-1">
@@ -479,7 +540,6 @@ export default function DailyBreakdown({
           <FilterToggle showAll={showAllEntries} onToggle={setShowAllEntries} />
         </div>
       </div>
-
       {/* Content Area with Loading States */}
       <div className="min-h-[150px] md:min-h-[180px]">
         {isChangingDate ? (
@@ -496,7 +556,7 @@ export default function DailyBreakdown({
             </div>
             <p className="text-white/80 font-medium text-sm">Coming Soon</p>
             <p className="text-xs text-white/40 mt-1 max-w-[140px] md:max-w-[160px]">
-              The future holds possibilities. Live in the present.
+              Hold On Time Traveler , Hold on !{" "}
             </p>
           </div>
         ) : selectedEntries.length > 0 ? (
@@ -536,9 +596,9 @@ export default function DailyBreakdown({
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 md:gap-2 ml-2">
-                  <div className="flex items-center gap-0.5 md:gap-1 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg bg-blush/10">
-                    <Users className="w-2.5 h-2.5 md:w-3 md:h-3 text-blush/80" />
-                    <span className="text-xs md:text-sm font-semibold text-blush/80">
+                  <div className="flex items-center gap-0.5 md:gap-1 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg bg-white/10">
+                    <Users className="w-2.5 h-2.5 md:w-3 md:h-3 text-white/80" />
+                    <span className="text-xs md:text-sm font-semibold text-white/80">
                       {entry.count}
                     </span>
                   </div>
@@ -555,21 +615,22 @@ export default function DailyBreakdown({
               <Users className="w-4 h-4 md:w-5 md:h-5 text-white/30" />
             </div>
             <p className="text-white/70 font-medium text-sm">
-              {showAllEntries ? "No Acts Today" : "No Acts from You Today"}
+              {showAllEntries
+                ? "You Were behaving  mame!😁"
+                : "You Were behaving  mame!😁"}
             </p>
             <p className="text-xs text-white/40 mt-1 max-w-[160px] md:max-w-[180px]">
               {activeDate === todayStr
                 ? showAllEntries
-                  ? "No one has added acts yet"
-                  : "Start the day with an act of love"
+                  ? "Quit in the west"
+                  : "Start the day with admit"
                 : showAllEntries
-                  ? "A quiet day in the love journal"
-                  : "You didn't log any acts this day"}
+                  ? "A quiet day in the house"
+                  : " "}
             </p>
           </div>
         )}
       </div>
-
       {/* Loading Overlay */}
       {isLoading && (
         <div className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">

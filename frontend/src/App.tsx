@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import clsx from "clsx";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import ToastContainer from "./components/ToastContainer";
 import { USER_PINS, User, Entry, WeeklySummary, ActiveTab } from "./types";
@@ -17,6 +16,7 @@ import EntryForm from "./components/EntryForm";
 import ImageZoom from "./components/ImageZoom";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import ThemeToggle from "./components/ThemeToggle";
+import { ThemeContext } from "./contexts/ThemeContext";
 
 const API_URL = "https://tally-bibx.onrender.com";
 // const API_URL = "http://localhost:4000";
@@ -74,8 +74,7 @@ function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(
     () =>
-      (localStorage.getItem(THEME_STORAGE_KEY) as "light" | "dark") ||
-      "light",
+      (localStorage.getItem(THEME_STORAGE_KEY) as "light" | "dark") || "light",
   );
 
   const isDarkTheme = theme === "dark";
@@ -502,9 +501,11 @@ function AppContent() {
 
   const handleTab = (tab: ActiveTab) => {
     setActiveTab(tab);
-    const targetId =
-      tab === "dashboard" ? "dashboard" : tab === "new" ? "new" : "history";
-    const target = document.getElementById(targetId);
+    if (tab === "new") {
+      openNewEntry();
+      return;
+    }
+    const target = document.getElementById(tab);
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -544,7 +545,6 @@ function AppContent() {
     }
   }, [selectedWeekStart, activeUserId]);
 
-
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -555,107 +555,109 @@ function AppContent() {
   }
 
   return (
-    <div className="app-shell min-h-screen">
-      <ThemeToggle
-        isDark={isDarkTheme}
-        onToggle={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
-      />
-      {!activeUserId && (
-        <PinLock
-          pinValue={pinValue}
-          setPinValue={setPinValue}
-          authError={authError}
-          onPinSubmit={handlePinSubmit}
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      <div className="app-shell min-h-screen">
+        <ThemeToggle
+          isDark={isDarkTheme}
+          onToggle={() =>
+            setTheme((prev) => (prev === "dark" ? "light" : "dark"))
+          }
         />
-      )}
-
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-24 pt-10 sm:px-8">
-        <Header
-          activeUser={activeUser}
-          weekNumber={weekNumber}
-          weekLabel={weekLabel}
-          onLogout={handleLogout}
-        />
-
-        <JudgeView isJudge={isJudge} />
-
-        <section className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-          <WeeklyTotals
-            activeUserId={activeUserId}
-            users={users}
-            weeklySummary={weeklySummary}
-          />
-
-          <WeeklyStatus
-            activeUserId={activeUserId}
-            users={users}
-            weeklySummary={weeklySummary}
-            isJudge={isJudge}
-          />
-        </section>
-
-        <DailyBreakdown
-          entries={entries}
-          selectedWeekStart={selectedWeekStart}
-          onWeekChange={(weekStart) => {
-            setSelectedWeekStart(weekStart);
-            loadEntries(weekStart);
-          }}
-          onEntryClick={setSelectedEntry}
-          onDateSelect={(date) => {
-            setActiveDate(date);
-          }}
-          activeUserId={activeUserId}
-        />
-
-        <NewEntrySection
-          activeUserId={activeUserId}
-          isJudge={isJudge}
-          onNewEntry={openNewEntry}
-        />
-      </main>
-
-      <BottomNav activeTab={activeTab} onTabChange={handleTab} />
-
-      {/* Modals */}
-      <AnimatePresence>
-        {selectedEntry && (
-          <EntryModal
-            entry={selectedEntry}
-            activeUserId={activeUserId}
-            isJudge={isJudge}
-            onClose={() => setSelectedEntry(null)}
-            onEdit={openEditEntry}
-            onDelete={handleDeleteEntry}
-            onImageClick={setZoomImageUrl}
+        {!activeUserId && (
+          <PinLock
+            pinValue={pinValue}
+            setPinValue={setPinValue}
+            authError={authError}
+            onPinSubmit={handlePinSubmit}
           />
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>
-        {isFormOpen && (
-          <EntryForm
-            formState={formState}
-            setFormState={setFormState}
-            imagePreviewUrl={imagePreviewUrl}
+        <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-24 pt-10 sm:px-8">
+          <Header
             activeUser={activeUser}
-            isSubmitting={isSubmitting}
-            isJudge={isJudge}
-            onClose={() => setIsFormOpen(false)}
-            onSave={handleSaveEntry}
+            weekNumber={weekNumber}
+            weekLabel={weekLabel}
+            onLogout={handleLogout}
           />
-        )}
-      </AnimatePresence>
 
-      <AnimatePresence>
-        {zoomImageUrl && (
-          <ImageZoom
-            imageUrl={zoomImageUrl}
-            onClose={() => setZoomImageUrl(null)}
+          <JudgeView isJudge={isJudge} />
+
+          <section className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+            <WeeklyTotals
+              activeUserId={activeUserId}
+              users={users}
+              weeklySummary={weeklySummary}
+            />
+
+            <WeeklyStatus
+              activeUserId={activeUserId}
+              users={users}
+              weeklySummary={weeklySummary}
+              isJudge={isJudge}
+            />
+          </section>
+
+          <DailyBreakdown
+            entries={entries}
+            selectedWeekStart={selectedWeekStart}
+            onWeekChange={(weekStart) => {
+              setSelectedWeekStart(weekStart);
+              loadEntries(weekStart);
+            }}
+            onEntryClick={setSelectedEntry}
+            onDateSelect={(date) => {
+              setActiveDate(date);
+            }}
+            activeUserId={activeUserId}
           />
-        )}
-      </AnimatePresence>
-    </div>
+        </main>
+
+        <BottomNav
+          activeTab={activeTab}
+          onTabChange={handleTab}
+          onNewEntry={openNewEntry}
+          canCreateEntry={Boolean(activeUserId) && !isJudge}
+        />
+        {/* Modals */}
+        <AnimatePresence>
+          {selectedEntry && (
+            <EntryModal
+              entry={selectedEntry}
+              activeUserId={activeUserId}
+              isJudge={isJudge}
+              onClose={() => setSelectedEntry(null)}
+              onEdit={openEditEntry}
+              onDelete={handleDeleteEntry}
+              onImageClick={setZoomImageUrl}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isFormOpen && (
+            <EntryForm
+              formState={formState}
+              setFormState={setFormState}
+              imagePreviewUrl={imagePreviewUrl}
+              activeUser={activeUser}
+              isSubmitting={isSubmitting}
+              isJudge={isJudge}
+              onClose={() => setIsFormOpen(false)}
+              onSave={handleSaveEntry}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {zoomImageUrl && (
+            <ImageZoom
+              imageUrl={zoomImageUrl}
+              onClose={() => setZoomImageUrl(null)}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+    </ThemeContext.Provider>
   );
 }
 

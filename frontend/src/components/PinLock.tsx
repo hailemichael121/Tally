@@ -39,7 +39,7 @@ export default function PinLock({
             </p>
             <h1 className="mt-2 text-2xl font-semibold">Enter PIN</h1>
           </div>
-          <div className="rounded-2xl bg-white/10 px-4 py-3 text-xl text-blush">
+          <div className="rounded-2xl bg-white/10 px-4 py-3 text-xl text-white">
             <IconLock />
           </div>
         </div>
