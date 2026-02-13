@@ -28,9 +28,6 @@ const colors = {
 
 const host = process.env.HOST || `https://tally-bibx.onrender.com`;
 console.log(
-  `${colors.dim}└─ Health:${colors.reset} ${colors.blue}${host}/${process.env.NODE_ENV === "development" ? "health" : ""}${colors.reset}`,
-);
-console.log(
   `${colors.dim}└─ Health:${colors.reset} ${colors.blue}${host}/${colors.reset}`,
 );
 
@@ -160,13 +157,23 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET || "",
 });
 
+// Types for Prisma enums
+type ReactionKind =
+  | "thumbs_up"
+  | "love"
+  | "smile"
+  | "cry"
+  | "side_eye"
+  | "kind";
+type EntryActivityType = "reaction" | "comment" | "reply";
+
 const entrySchema = z.object({
   userId: z.string(),
   date: z.string(),
   count: z.number().int().min(1),
-  note: z.string().max(280).nullable().optional(), // Accepts string or null
-  tags: z.array(z.string().min(1)).max(6).nullable().optional(), // Accepts array or null
-  imageUrl: z.string().url().nullable().optional(), // Accepts string or null
+  note: z.string().max(280).nullable().optional(),
+  tags: z.array(z.string().min(1)).max(6).nullable().optional(),
+  imageUrl: z.string().url().nullable().optional(),
 });
 
 const partialEntrySchema = entrySchema.partial();
@@ -310,10 +317,8 @@ const hasCloudinaryConfig = () => {
   );
 };
 
-// Helper function to extract public ID from Cloudinary URL
 const extractPublicId = (url: string): string | null => {
   try {
-    // Cloudinary URL pattern: https://res.cloudinary.com/<cloud_name>/<resource_type>/<type>/<version>/<public_id>.<format>
     const match = url.match(
       /\/upload\/(?:v\d+\/)?(.+?)\.(?:jpg|jpeg|png|gif|webp|bmp|tiff)/i,
     );
@@ -321,12 +326,10 @@ const extractPublicId = (url: string): string | null => {
       return match[1];
     }
 
-    // Try alternative pattern
     const parts = url.split("/");
     const filename = parts[parts.length - 1];
     const publicId = filename.split(".")[0];
 
-    // Remove the version prefix if present
     return publicId.replace(/^v\d+\//, "");
   } catch (error) {
     console.log(
@@ -336,7 +339,6 @@ const extractPublicId = (url: string): string | null => {
   }
 };
 
-// Helper function to delete image from Cloudinary
 const deleteImageFromCloudinary = async (
   imageUrl: string,
 ): Promise<boolean> => {
@@ -356,7 +358,6 @@ const deleteImageFromCloudinary = async (
       return false;
     }
 
-    // Delete the image from Cloudinary
     const result = await cloudinary.uploader.destroy(publicId);
 
     if (result.result === "ok") {
@@ -380,6 +381,7 @@ const deleteImageFromCloudinary = async (
   }
 };
 
+// Routes
 app.get("/", (_req, res) => {
   res.json({
     ok: true,
@@ -451,7 +453,6 @@ app.get("/entries", async (req, res) => {
     const date = req.query.date as string | undefined;
     const userId = req.query.userId as string | undefined;
 
-    // Build where clause
     const where: any = {};
 
     if (weekStart) {
@@ -459,7 +460,6 @@ app.get("/entries", async (req, res) => {
     }
 
     if (date) {
-      // Filter by specific date (YYYY-MM-DD format)
       const startDate = new Date(date);
       startDate.setHours(0, 0, 0, 0);
 
@@ -607,11 +607,10 @@ app.post("/entries/:id/activities", async (req, res) => {
       return res.status(404).json({ error: "Actor not found" });
     }
 
-    // For reactions - handle toggle (delete if exists, create if doesn't)
+    // For reactions - handle toggle
     if (parsed.data.type === "reaction") {
       const targetId = parsed.data.targetCommentId || null;
 
-      // Check if user already has a reaction on this target
       const existingReaction = await prisma.entryActivity.findFirst({
         where: {
           entryId: entry.id,
@@ -622,13 +621,11 @@ app.post("/entries/:id/activities", async (req, res) => {
       });
 
       if (existingReaction) {
-        // If same reaction kind, delete it (toggle off)
         if (existingReaction.reactionKind === parsed.data.reactionKind) {
           await prisma.entryActivity.delete({
             where: { id: existingReaction.id },
           });
 
-          // Also delete associated notifications
           await prisma.notification.deleteMany({
             where: { activityId: existingReaction.id },
           });
@@ -639,7 +636,6 @@ app.post("/entries/:id/activities", async (req, res) => {
             reactionKind: parsed.data.reactionKind,
           });
         } else {
-          // If different reaction kind, update it
           const updated = await prisma.entryActivity.update({
             where: { id: existingReaction.id },
             data: { reactionKind: parsed.data.reactionKind },
@@ -649,7 +645,7 @@ app.post("/entries/:id/activities", async (req, res) => {
       }
     }
 
-    // For non-reactions or new reactions, proceed with creation
+    // Validate parent comment if needed
     if (parsed.data.parentId) {
       const parentComment = await prisma.entryActivity.findFirst({
         where: { id: parsed.data.parentId, entryId: entry.id },
@@ -659,6 +655,7 @@ app.post("/entries/:id/activities", async (req, res) => {
       }
     }
 
+    // Validate target comment if needed
     if (parsed.data.targetCommentId) {
       const targetComment = await prisma.entryActivity.findFirst({
         where: { id: parsed.data.targetCommentId, entryId: entry.id },
@@ -680,15 +677,13 @@ app.post("/entries/:id/activities", async (req, res) => {
       },
     });
 
-    // Create notifications for relevant users
+    // Create notifications
     const recipientIds = new Set<string>();
 
-    // Notify entry owner if different from actor
     if (entry.userId !== parsed.data.actorId) {
       recipientIds.add(entry.userId);
     }
 
-    // Notify parent comment owner if replying
     if (parsed.data.parentId) {
       const parent = await prisma.entryActivity.findUnique({
         where: { id: parsed.data.parentId },
@@ -698,7 +693,6 @@ app.post("/entries/:id/activities", async (req, res) => {
       }
     }
 
-    // Notify target comment owner if reacting to a comment
     if (parsed.data.targetCommentId) {
       const target = await prisma.entryActivity.findUnique({
         where: { id: parsed.data.targetCommentId },
@@ -921,9 +915,9 @@ app.post("/entries", async (req, res) => {
         date: new Date(date),
         weekStart,
         count,
-        note: note || null, // This handles null properly
-        tags: serializeTags(tags || null), // This handles null properly
-        imageUrl: imageUrl || null, // This handles null properly
+        note: note || null,
+        tags: serializeTags(tags || null),
+        imageUrl: imageUrl || null,
       },
     });
 
@@ -943,6 +937,7 @@ app.post("/entries", async (req, res) => {
     });
   }
 });
+
 app.put("/entries/:id", async (req, res) => {
   try {
     const parsed = updateSchema.safeParse({ ...req.body, id: req.params.id });
@@ -977,7 +972,6 @@ app.put("/entries/:id", async (req, res) => {
       });
     }
 
-    // Build update data object with only provided fields
     const updateData: any = { editedAt: new Date() };
 
     if (date !== undefined) {
@@ -986,18 +980,11 @@ app.put("/entries/:id", async (req, res) => {
     }
 
     if (count !== undefined) updateData.count = count;
-
-    // Handle note - if undefined, don't update; if null, set to null
     if (note !== undefined) updateData.note = note;
-
-    // Handle tags - if undefined, don't update; if null, set to null
     if (tags !== undefined) updateData.tags = serializeTags(tags);
 
-    // Handle image update
     if (imageUrl !== undefined) {
-      // Delete old image if it exists and we're changing/removing the image
       if (entry.imageUrl) {
-        // If imageUrl is null (removing image) OR it's a new URL (changing image)
         if (imageUrl === null || imageUrl !== entry.imageUrl) {
           console.log(
             `${colors.cyan}🔄 Deleting old image from Cloudinary${colors.reset}`,
@@ -1005,7 +992,6 @@ app.put("/entries/:id", async (req, res) => {
           await deleteImageFromCloudinary(entry.imageUrl);
         }
       }
-      // Set the new imageUrl (could be null to remove, undefined to keep, or a new URL)
       updateData.imageUrl = imageUrl;
     }
 
@@ -1028,6 +1014,7 @@ app.put("/entries/:id", async (req, res) => {
     });
   }
 });
+
 app.delete("/entries/:id", async (req, res) => {
   try {
     const parsed = ownerSchema.safeParse(req.body);
@@ -1065,21 +1052,13 @@ app.delete("/entries/:id", async (req, res) => {
       });
     }
 
-    // Delete image from Cloudinary if it exists
     if (entry.imageUrl) {
       console.log(
         `${colors.cyan}🔄 Deleting image from Cloudinary${colors.reset}`,
       );
-      const imageDeleted = await deleteImageFromCloudinary(entry.imageUrl);
-
-      if (!imageDeleted) {
-        console.log(
-          `${colors.yellow}⚠ Could not delete image from Cloudinary, but proceeding with entry deletion${colors.reset}`,
-        );
-      }
+      await deleteImageFromCloudinary(entry.imageUrl);
     }
 
-    // Delete the entry from database
     await prisma.entry.delete({ where: { id: req.params.id } });
 
     console.log(
@@ -1157,9 +1136,6 @@ app.listen(port, () => {
   );
   console.log(
     `${colors.dim}└─ Time:${colors.reset} ${colors.white}${getTimestamp()}${colors.reset}`,
-  );
-  console.log(
-    `${colors.dim}└─ Health:${colors.reset} ${colors.blue}http://localhost:${port}/health${colors.reset}`,
   );
   console.log(
     `${colors.dim}└─ Environment:${colors.reset} ${colors.yellow}${process.env.NODE_ENV || "development"}${colors.reset}\n`,
