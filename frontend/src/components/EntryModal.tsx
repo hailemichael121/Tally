@@ -662,9 +662,10 @@ export default function EntryModal({
       }
 
       setActiveReaction(kind);
+      // Fix: Pass undefined instead of null for optional parameters
       await onAddActivity(entry.id, "reaction", {
         reactionKind: kind,
-        targetCommentId,
+        ...(targetCommentId ? { targetCommentId } : {}),
       });
       setTimeout(() => setActiveReaction(null), 250);
 
@@ -717,6 +718,7 @@ export default function EntryModal({
       });
 
       setActiveReaction(kind);
+      // Fix: Pass undefined instead of null for optional parameters
       await onAddActivity(entry.id, "reaction", { reactionKind: kind });
       setTimeout(() => setActiveReaction(null), 250);
 
@@ -728,12 +730,13 @@ export default function EntryModal({
   const handleAddComment = async () => {
     if (!commentInput.trim()) return;
 
+    const content = commentInput.trim();
     const tempComment: EntryActivity = {
       id: `temp-${Date.now()}`,
       entryId: entry.id,
       actorId: activeUserId,
       type: "comment",
-      content: commentInput.trim(),
+      content,
       reactionKind: null,
       parentId: null,
       targetCommentId: null,
@@ -744,7 +747,8 @@ export default function EntryModal({
     setComments((prev) => [...prev, tempComment]);
     setCommentInput("");
 
-    await onAddActivity(entry.id, "comment", { content: tempComment.content });
+    // Fix: Pass only content, parentId and targetCommentId are omitted (undefined)
+    await onAddActivity(entry.id, "comment", { content });
     refreshActivities();
   };
 
@@ -779,7 +783,6 @@ export default function EntryModal({
       onClose();
     }
   };
-
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-md p-2 sm:p-4"
