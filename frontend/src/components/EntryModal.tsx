@@ -58,12 +58,29 @@ const reactionConfig: Record<
   { label: string; emoji: string; color: string }
 > = {
   thumbs_up: { label: "Like", emoji: "👍", color: "text-blue-400" },
-  love: { label: "Love", emoji: "❤️", color: "text-rose-400" },
-  smile: { label: "Laugh", emoji: "😄", color: "text-yellow-400" },
+  love: { label: "Thumbs down", emoji: "👎", color: "text-sky-400" },
+  smile: { label: "Angry", emoji: "😡", color: "text-yellow-400" },
   cry: { label: "Sad", emoji: "😢", color: "text-indigo-400" },
-  side_eye: { label: "Side eye", emoji: "👀", color: "text-purple-400" },
-  kind: { label: "Celebrate", emoji: "✨", color: "text-emerald-400" },
+  side_eye: { label: "Shock", emoji: "😮", color: "text-purple-400" },
+  kind: { label: "Celebrate", emoji: "🎉", color: "text-emerald-400" },
 };
+
+const primaryReactions: ReactionKind[] = ["thumbs_up", "love", "smile"];
+
+const extraReactionPicker: { kind: ReactionKind; emoji: string }[] = [
+  { kind: "cry", emoji: "😢" },
+  { kind: "cry", emoji: "😭" },
+  { kind: "cry", emoji: "🥹" },
+  { kind: "side_eye", emoji: "😮" },
+  { kind: "side_eye", emoji: "🤯" },
+  { kind: "side_eye", emoji: "😳" },
+  { kind: "kind", emoji: "🎉" },
+  { kind: "kind", emoji: "✨" },
+  { kind: "kind", emoji: "🔥" },
+  { kind: "kind", emoji: "🙌" },
+  { kind: "kind", emoji: "💯" },
+  { kind: "kind", emoji: "👏" },
+];
 
 const extendedReactions: {
   kind: ReactionKind;
@@ -160,7 +177,7 @@ const ReactionButton = ({
           ${size === "small" ? "px-1.5 py-0.5 text-xs" : "px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm"}
           ${
             isActive
-              ? "bg-rose-200/20 border border-rose-200/30 scale-105"
+              ? "scale-105 border border-fuchsia-400/60 bg-fuchsia-500/20 shadow-[0_0_0_2px_rgba(217,70,239,.2)]"
               : "border border-white/15 bg-white/5 hover:bg-white/10"
           }
         `}
@@ -172,7 +189,7 @@ const ReactionButton = ({
         {count > 0 && (
           <span
             className={`${size === "small" ? "text-[8px]" : "text-[10px] sm:text-xs"} ${
-              isActive ? "text-rose-200" : "text-white/60"
+              isActive ? "text-fuchsia-100 dark:text-fuchsia-200" : "text-white/60"
             }`}
           >
             {count}
@@ -188,7 +205,7 @@ const ReactionButton = ({
             animate={{ scale: 2, opacity: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
-            className="absolute inset-0 pointer-events-none rounded-full bg-rose-200/30"
+            className="absolute inset-0 pointer-events-none rounded-full bg-fuchsia-400/30"
           />
         )}
       </AnimatePresence>
@@ -211,7 +228,7 @@ const ReplyThread = ({
   replyTarget,
   setReplyTarget,
   submittingReply,
-  allComments,
+  allActivities,
 }: {
   comment: CommentWithReplies;
   depth: number;
@@ -228,7 +245,7 @@ const ReplyThread = ({
   replyTarget: string | null;
   setReplyTarget: React.Dispatch<React.SetStateAction<string | null>>;
   submittingReply: boolean;
-  allComments: EntryActivity[];
+  allActivities: EntryActivity[];
 }) => {
   const [showReactions, setShowReactions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -275,10 +292,10 @@ const ReplyThread = ({
   const userReaction = reactionMap[comment.id];
 
   const commentReactions = useMemo(() => {
-    return allComments.filter(
+    return allActivities.filter(
       (c) => c.targetCommentId === comment.id && c.type === "reaction",
     );
-  }, [allComments, comment.id]);
+  }, [allActivities, comment.id]);
 
   const reactionCounts = useMemo(() => {
     const counts: Partial<Record<ReactionKind, number>> = {};
@@ -289,6 +306,13 @@ const ReplyThread = ({
     });
     return counts;
   }, [commentReactions]);
+
+  const sortedReactionCounts = useMemo(() => {
+    return Object.entries(reactionCounts).sort(([, countA], [, countB]) => {
+      if (countA !== countB) return countB - countA;
+      return 0;
+    });
+  }, [reactionCounts]);
 
   const maxDepth = 10;
   if (depth > maxDepth) return null;
@@ -333,12 +357,12 @@ const ReplyThread = ({
 
                 {Object.keys(reactionCounts).length > 0 && (
                   <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                    {Object.entries(reactionCounts).map(([kind, count]) => (
+                    {sortedReactionCounts.map(([kind, count]) => (
                       <span
                         key={kind}
                         className={`
                           inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] sm:text-xs
-                          ${userReaction === kind ? "bg-rose-200/20 border border-rose-200/30" : "bg-white/5"}
+                          ${userReaction === kind ? "border border-fuchsia-400/60 bg-fuchsia-500/20 text-fuchsia-100" : "border border-white/10 bg-white/5"}
                         `}
                         title={reactionConfig[kind as ReactionKind]?.label}
                       >
@@ -379,7 +403,7 @@ const ReplyThread = ({
                             onClick={() => handleReaction(kind)}
                             className={`
                               rounded-lg p-1.5 sm:p-2 text-base sm:text-lg transition-all
-                              ${userReaction === kind ? "scale-110 bg-white/10 ring-1 ring-rose-200/30" : "hover:bg-white/10"}
+                              ${userReaction === kind ? "scale-110 bg-fuchsia-500/20 ring-2 ring-fuchsia-400/60" : "hover:bg-white/10"}
                             `}
                             title={kind}
                           >
@@ -503,7 +527,7 @@ const ReplyThread = ({
                 replyTarget={replyTarget}
                 setReplyTarget={setReplyTarget}
                 submittingReply={submittingReply}
-                allComments={allComments}
+                allActivities={allActivities}
               />
             ))}
           </motion.div>
@@ -669,9 +693,8 @@ export default function EntryModal({
       });
       setTimeout(() => setActiveReaction(null), 250);
 
-      refreshActivities();
     },
-    [entry.id, onAddActivity, activeUserId, reactionMap, refreshActivities],
+    [entry.id, onAddActivity, activeUserId, reactionMap],
   );
 
   const handleEntryReaction = useCallback(
@@ -722,9 +745,8 @@ export default function EntryModal({
       await onAddActivity(entry.id, "reaction", { reactionKind: kind });
       setTimeout(() => setActiveReaction(null), 250);
 
-      refreshActivities();
     },
-    [entry.id, entryReaction, onAddActivity, activeUserId, refreshActivities],
+    [entry.id, entryReaction, onAddActivity, activeUserId],
   );
 
   const handleAddComment = async () => {
@@ -885,12 +907,12 @@ export default function EntryModal({
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1.5 flex-wrap">
-                {extendedReactions.slice(0, 4).map(({ kind, emoji, label }) => (
+                {primaryReactions.map((kind) => (
                   <ReactionButton
                     key={kind}
                     kind={kind}
-                    emoji={emoji}
-                    label={label}
+                    emoji={reactionConfig[kind].emoji}
+                    label={reactionConfig[kind].label}
                     count={entryReactionCounts[kind]}
                     isActive={entryReaction === kind}
                     onClick={() => handleEntryReaction(kind)}
@@ -911,40 +933,26 @@ export default function EntryModal({
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 5 }}
-                        className="absolute left-0 bottom-full mb-2 z-20 flex flex-col gap-1 rounded-xl border border-white/10 bg-ink/95 p-2 shadow-xl backdrop-blur-md"
-                        style={{ minWidth: "160px" }}
+                        className="absolute left-0 bottom-full mb-2 z-20 grid grid-cols-4 gap-1 rounded-xl border border-white/10 bg-ink/95 p-2 shadow-xl backdrop-blur-md"
+                        style={{ minWidth: "220px" }}
                       >
-                        {extendedReactions
-                          .slice(4)
-                          .map(({ kind, emoji, label }) => {
-                            const count = entryReactionCounts[kind];
-                            return (
-                              <button
-                                key={kind}
-                                onClick={() => {
-                                  handleEntryReaction(kind);
-                                  setShowMoreReactions(false);
-                                }}
-                                className={`
-                                flex items-center gap-2 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 
-                                hover:bg-white/10 transition-colors w-full text-xs sm:text-sm
-                                ${entryReaction === kind ? "bg-rose-200/20" : ""}
-                              `}
-                              >
-                                <span className="text-base sm:text-lg">
-                                  {emoji}
-                                </span>
-                                <span className="flex-1 text-left">
-                                  {label}
-                                </span>
-                                {count > 0 && (
-                                  <span className="text-[10px] sm:text-xs text-white/60">
-                                    {count}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
+                        {extraReactionPicker.map(({ kind, emoji }, index) => (
+                          <button
+                            key={`${kind}-${emoji}-${index}`}
+                            onClick={() => {
+                              handleEntryReaction(kind);
+                              setShowMoreReactions(false);
+                            }}
+                            className={`rounded-lg p-1.5 text-base transition-colors hover:bg-white/10 ${
+                              entryReaction === kind
+                                ? "bg-fuchsia-500/20 ring-1 ring-fuchsia-400/60"
+                                : ""
+                            }`}
+                            title={reactionConfig[kind].label}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -981,7 +989,7 @@ export default function EntryModal({
                   replyTarget={replyTarget}
                   setReplyTarget={setReplyTarget}
                   submittingReply={submittingReply}
-                  allComments={comments}
+                  allActivities={[...comments, ...reactions]}
                 />
               ))}
 
