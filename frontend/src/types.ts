@@ -5,6 +5,8 @@ export type User = {
   track: string;
 };
 
+export type EntryActivityType = "reaction" | "comment" | "reply";
+
 export type Entry = {
   id: string;
   userId: string;
@@ -17,6 +19,12 @@ export type Entry = {
   createdAt?: string;
   updatedAt?: string;
   editedAt: string | null;
+  unreadActivityCount?: number;
+  activitySummary?: {
+    reaction: number;
+    comment: number;
+    reply: number;
+  };
   user: User;
 };
 
@@ -32,3 +40,14 @@ export const USER_PINS = {
   "1221": { id: "yihun", name: "Yihun", loveName: "Shebeto", track: "females" },
   "0427": { id: "judge", name: "Judge", loveName: "Judge", track: "judge" },
 } as const;
+
+
+export type EntryActivity = {
+  id: string;
+  entryId: string;
+  actorId: string;
+  type: EntryActivityType;
+  content: string | null;
+  createdAt: string;
+  actor: User;
+};

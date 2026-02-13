@@ -181,6 +181,16 @@ const ownerSchema = z.object({
   userId: z.string(),
 });
 
+const activitySchema = z.object({
+  actorId: z.string(),
+  type: z.enum(["reaction", "comment", "reply"]),
+  content: z.string().max(280).optional(),
+});
+
+const notificationReadSchema = z.object({
+  userId: z.string(),
+});
+
 const uploadSchema = z.object({
   imageData: z.string().min(1),
 });
@@ -248,6 +258,10 @@ const mapEntry = (entry: any) => {
     imageUrl: entry.imageUrl || null,
     editedAt: entry.editedAt || null,
     user: entry.user,
+    unreadActivityCount: Array.isArray(entry.notifications)
+      ? entry.notifications.length
+      : 0,
+    activitySummary: entry.activitySummary || { reaction: 0, comment: 0, reply: 0 },
   };
 };
 
@@ -398,6 +412,7 @@ app.get("/entries", async (req, res) => {
   try {
     const weekStart = req.query.weekStart as string | undefined;
     const date = req.query.date as string | undefined;
+    const userId = req.query.userId as string | undefined;
 
     // Build where clause
     const where: any = {};
@@ -427,14 +442,50 @@ app.get("/entries", async (req, res) => {
 
     const entries = await prisma.entry.findMany({
       where,
-      include: { user: true },
+      include: {
+        user: true,
+        notifications: userId
+          ? {
+              where: {
+                userId,
+                isRead: false,
+              },
+              select: { id: true },
+            }
+          : false,
+      },
       orderBy: { date: "desc" },
     });
+
+    const entryIds = entries.map((entry) => entry.id);
+    const activityGroups =
+      entryIds.length > 0
+        ? await prisma.entryActivity.groupBy({
+            by: ["entryId", "type"],
+            where: { entryId: { in: entryIds } },
+            _count: { _all: true },
+          })
+        : [];
+
+    const summaryMap: Record<string, { reaction: number; comment: number; reply: number }> = {};
+    for (const group of activityGroups) {
+      if (!summaryMap[group.entryId]) {
+        summaryMap[group.entryId] = { reaction: 0, comment: 0, reply: 0 };
+      }
+      summaryMap[group.entryId][group.type] = group._count._all;
+    }
+
+    const mappedEntries = entries.map((entry) =>
+      mapEntry({
+        ...entry,
+        activitySummary: summaryMap[entry.id] || { reaction: 0, comment: 0, reply: 0 },
+      }),
+    );
 
     console.log(
       `${colors.green}✓ Found ${entries.length} entries${colors.reset}`,
     );
-    res.json(entries.map(mapEntry));
+    res.json(mappedEntries);
   } catch (error) {
     const message = error instanceof Error ? error.message : error;
     console.error(
@@ -445,6 +496,128 @@ app.get("/entries", async (req, res) => {
       error: "Database error",
       message: "Could not fetch entries.",
     });
+  }
+});
+
+
+app.get("/entries/:id/activities", async (req, res) => {
+  try {
+    const activities = await prisma.entryActivity.findMany({
+      where: { entryId: req.params.id },
+      include: { actor: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    res.json(activities);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(
+      `${colors.red}✗ Failed to fetch activities:${colors.reset}`,
+      message,
+    );
+    res.status(500).json({ error: "Failed to fetch activities" });
+  }
+});
+
+app.post("/entries/:id/activities", async (req, res) => {
+  try {
+    const parsed = activitySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const entry = await prisma.entry.findUnique({
+      where: { id: req.params.id },
+      include: { user: true },
+    });
+
+    if (!entry) {
+      return res.status(404).json({ error: "Entry not found" });
+    }
+
+    const actor = await prisma.user.findUnique({ where: { id: parsed.data.actorId } });
+    if (!actor) {
+      return res.status(404).json({ error: "Actor not found" });
+    }
+
+    const activity = await prisma.entryActivity.create({
+      data: {
+        entryId: entry.id,
+        actorId: parsed.data.actorId,
+        type: parsed.data.type,
+        content: parsed.data.content || null,
+      },
+    });
+
+    if (entry.userId !== parsed.data.actorId) {
+      await prisma.notification.create({
+        data: {
+          userId: entry.userId,
+          actorId: parsed.data.actorId,
+          entryId: entry.id,
+          activityId: activity.id,
+          type: parsed.data.type,
+          isRead: false,
+        },
+      });
+    }
+
+    res.status(201).json(activity);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(`${colors.red}✗ Failed to create activity:${colors.reset}`, message);
+    res.status(500).json({ error: "Failed to create activity" });
+  }
+});
+
+app.get("/notifications/summary", async (req, res) => {
+  try {
+    const parsed = notificationReadSchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    }
+
+    const unreadCount = await prisma.notification.count({
+      where: {
+        userId: parsed.data.userId,
+        isRead: false,
+      },
+    });
+
+    res.json({ unreadCount });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(`${colors.red}✗ Failed to load notification summary:${colors.reset}`, message);
+    res.status(500).json({ error: "Failed to load notification summary" });
+  }
+});
+
+app.post("/entries/:id/notifications/read", async (req, res) => {
+  try {
+    const parsed = notificationReadSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    }
+
+    await prisma.notification.updateMany({
+      where: {
+        entryId: req.params.id,
+        userId: parsed.data.userId,
+        isRead: false,
+      },
+      data: {
+        isRead: true,
+      },
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(`${colors.red}✗ Failed to mark notifications read:${colors.reset}`, message);
+    res.status(500).json({ error: "Failed to mark notifications read" });
   }
 });
 
