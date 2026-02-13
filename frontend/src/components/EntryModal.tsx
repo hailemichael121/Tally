@@ -580,6 +580,15 @@ export default function EntryModal({
 
   const commentTree = useMemo(() => buildCommentTree(comments), [comments]);
 
+  const displayNames = useMemo(
+    () =>
+      entry.tags
+        .flatMap((tag) => tag.split(","))
+        .map((name) => name.trim())
+        .filter(Boolean),
+    [entry.tags],
+  );
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -842,6 +851,30 @@ export default function EntryModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
+          {displayNames.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:p-4">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="min-w-[56px] text-center">
+                  <p className="text-[10px] sm:text-xs uppercase tracking-wider text-white/50">
+                    Count
+                  </p>
+                  <p className="text-3xl sm:text-4xl font-bold leading-none text-white">
+                    {entry.count}
+                  </p>
+                </div>
+
+                <div className="flex-1 border-l border-white/10 pl-3 sm:pl-4">
+                  <p className="text-[10px] sm:text-xs uppercase tracking-wider text-white/50 mb-1.5">
+                    Names
+                  </p>
+                  <p className="text-sm sm:text-base text-white/90 leading-relaxed break-words">
+                    {displayNames.join(", ")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {entry.note && (
             <div className="rounded-xl border border-white/10 bg-white/5 p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-white/80 whitespace-pre-wrap">
