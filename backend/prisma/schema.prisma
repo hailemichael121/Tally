@@ -14,6 +14,8 @@ model User {
   loveName  String
   track     String
   entries   Entry[]
+  sentActivities     EntryActivity[] @relation("ActivityActor")
+  notifications      Notification[]
   createdAt DateTime @default(now())
 }
 
@@ -31,7 +33,49 @@ model Entry {
   editedAt  DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activities    EntryActivity[]
+  notifications Notification[]
 
   @@index([userId, date])
   @@index([weekStart])
+}
+
+enum EntryActivityType {
+  reaction
+  comment
+  reply
+}
+
+model EntryActivity {
+  id        String            @id @default(cuid())
+  entryId   String
+  actorId   String
+  type      EntryActivityType
+  content   String?
+  createdAt DateTime          @default(now())
+
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  actor User  @relation("ActivityActor", fields: [actorId], references: [id], onDelete: Cascade)
+  notifications Notification[]
+
+  @@index([entryId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model Notification {
+  id         String            @id @default(cuid())
+  userId     String
+  actorId    String
+  entryId    String
+  activityId String
+  type       EntryActivityType
+  isRead     Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry    Entry         @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  activity EntryActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@index([entryId, userId, isRead])
 }

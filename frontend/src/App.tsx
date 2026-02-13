@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { ToastProvider, useToast } from "./contexts/ToastContext";
 import ToastContainer from "./components/ToastContainer";
-import { USER_PINS, User, Entry, WeeklySummary, ActiveTab } from "./types";
+import { USER_PINS, User, Entry, WeeklySummary, ActiveTab, EntryActivity } from "./types";
 import Header from "./components/Header";
 import JudgeView from "./components/JudgeView";
 import WeeklyTotals from "./components/WeeklyTotals";
@@ -86,10 +86,69 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [theme, setTheme] = useState<"light" | "dark">(
     () =>
       (localStorage.getItem(THEME_STORAGE_KEY) as "light" | "dark") || "light",
   );
+
+
+  const refreshNotificationSummary = async (userId: string) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/notifications/summary?userId=${encodeURIComponent(userId)}`
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      setUnreadNotificationCount(data.unreadCount || 0);
+    } catch (_error) {
+      // no-op for subtle notifications
+    }
+  };
+
+  const markEntryNotificationsAsRead = async (entryId: string, userId: string) => {
+    try {
+      await fetch(`${API_URL}/entries/${entryId}/notifications/read`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      await loadEntries(selectedWeekStart || undefined, undefined, userId);
+      refreshNotificationSummary(userId);
+    } catch (_error) {
+      // no-op
+    }
+  };
+
+  const handleEntryClick = async (entry: Entry) => {
+    setSelectedEntry(entry);
+    if (activeUserId && (entry.unreadActivityCount || 0) > 0) {
+      markEntryNotificationsAsRead(entry.id, activeUserId);
+    }
+  };
+
+  const addEntryActivity = async (
+    entryId: string,
+    type: "reaction" | "comment" | "reply",
+    content?: string,
+  ) => {
+    if (!activeUserId) return;
+
+    await fetch(`${API_URL}/entries/${entryId}/activities`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actorId: activeUserId, type, content }),
+    });
+
+    await loadEntries(selectedWeekStart || undefined, undefined, activeUserId);
+    refreshNotificationSummary(activeUserId);
+  };
+
+  const loadEntryActivities = async (entryId: string): Promise<EntryActivity[]> => {
+    const response = await fetch(`${API_URL}/entries/${entryId}/activities`);
+    if (!response.ok) return [];
+    return response.json();
+  };
 
   const isDarkTheme = theme === "dark";
   const activeUser =
@@ -427,13 +486,14 @@ function AppContent() {
   useEffect(() => {
     if (activeUserId) {
       loadAllData(activeUserId);
+      refreshNotificationSummary(activeUserId);
     }
   }, [activeUserId]);
 
   useEffect(() => {
     if (activeUserId) {
       const week = selectedWeekStart || undefined;
-      loadEntries(week);
+      loadEntries(week, undefined, activeUserId);
       loadSummary(week);
     }
   }, [selectedWeekStart, activeUserId]);
@@ -513,9 +573,9 @@ function AppContent() {
               selectedWeekStart={selectedWeekStart}
               onWeekChange={(weekStart) => {
                 setSelectedWeekStart(weekStart);
-                loadEntries(weekStart);
+                loadEntries(weekStart, undefined, activeUserId);
               }}
-              onEntryClick={setSelectedEntry}
+              onEntryClick={handleEntryClick}
               onDateSelect={(date) => {
                 setActiveDate(date);
               }}
@@ -529,6 +589,7 @@ function AppContent() {
           onTabChange={handleTab}
           onNewEntry={openNewEntry}
           canCreateEntry={Boolean(activeUserId) && !isJudge}
+          hasUnreadNotifications={unreadNotificationCount > 0}
         />
 
         <AnimatePresence>
@@ -541,6 +602,8 @@ function AppContent() {
               onEdit={openEditEntry}
               onDelete={handleDeleteEntry}
               onImageClick={setZoomImageUrl}
+              onAddActivity={addEntryActivity}
+              onLoadActivities={loadEntryActivities}
             />
           )}
         </AnimatePresence>

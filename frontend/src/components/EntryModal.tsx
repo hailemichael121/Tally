@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { Entry } from "../types";
-import { useToast } from "../contexts/ToastContext";
+import { Entry, EntryActivity, EntryActivityType } from "../types";
+import { useEffect, useMemo, useState } from "react";
 
 interface EntryModalProps {
   entry: Entry;
@@ -10,6 +10,12 @@ interface EntryModalProps {
   onEdit: (entry: Entry) => void;
   onDelete: (entry: Entry) => void;
   onImageClick: (url: string) => void;
+  onAddActivity: (
+    entryId: string,
+    type: EntryActivityType,
+    content?: string,
+  ) => Promise<void>;
+  onLoadActivities: (entryId: string) => Promise<EntryActivity[]>;
 }
 
 const formatDate = (value: string) =>
@@ -30,13 +36,51 @@ export default function EntryModal({
   onEdit,
   onDelete,
   onImageClick,
+  onAddActivity,
+  onLoadActivities,
 }: EntryModalProps) {
-  const { addToast } = useToast();
+  const [activities, setActivities] = useState<EntryActivity[]>([]);
+  const [commentInput, setCommentInput] = useState("");
+  const [newActivityIds, setNewActivityIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    onLoadActivities(entry.id).then((data) => {
+      if (!mounted) return;
+      setActivities(data);
+      const latestIds = data.slice(-2).map((item) => item.id);
+      setNewActivityIds(latestIds);
+      window.setTimeout(() => setNewActivityIds([]), 4500);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [entry.id, onLoadActivities]);
+
+  const groupedComments = useMemo(
+    () => activities.filter((activity) => activity.type !== "reaction"),
+    [activities],
+  );
 
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this entry?")) {
       await onDelete(entry);
     }
+  };
+
+  const submitComment = async (type: EntryActivityType) => {
+    if (!commentInput.trim()) return;
+    await onAddActivity(entry.id, type, commentInput.trim());
+    const data = await onLoadActivities(entry.id);
+    setActivities(data);
+    setCommentInput("");
+  };
+
+  const addReaction = async () => {
+    await onAddActivity(entry.id, "reaction");
+    const data = await onLoadActivities(entry.id);
+    setActivities(data);
   };
 
   return (
@@ -109,10 +153,65 @@ export default function EntryModal({
             </button>
           )}
 
+          <div className="rounded-xl border border-white/10 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs text-white/50">Activity</p>
+              <button
+                type="button"
+                onClick={addReaction}
+                className="rounded-full border border-white/15 px-2 py-1 text-[11px] text-white/80 hover:bg-white/10"
+              >
+                ❤️ React
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+              {groupedComments.length === 0 && (
+                <p className="text-xs text-white/40">No comments yet</p>
+              )}
+              {groupedComments.map((activity) => (
+                <div
+                  key={activity.id}
+                  className={`rounded-lg px-3 py-2 text-xs transition-colors ${
+                    newActivityIds.includes(activity.id)
+                      ? "bg-rose-200/10 border border-rose-200/20"
+                      : "bg-white/5 border border-white/10"
+                  }`}
+                >
+                  <p className="text-white/80">{activity.content}</p>
+                  <p className="mt-1 text-[10px] text-white/40">
+                    {activity.actor?.loveName || activity.actor?.name || "User"} •{" "}
+                    {new Date(activity.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {!isJudge && (
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={commentInput}
+                  onChange={(event) => setCommentInput(event.target.value)}
+                  placeholder="Write a comment..."
+                  className="flex-1 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white outline-none placeholder:text-white/30"
+                />
+                <button
+                  type="button"
+                  disabled={!commentInput.trim() || !activeUserId}
+                  onClick={() => submitComment("comment")}
+                  className="rounded-lg border border-white/15 px-3 py-2 text-xs text-white/85 disabled:opacity-40"
+                >
+                  Send
+                </button>
+              </div>
+            )}
+          </div>
+
           {!hasDetails(entry) && (
-            <p className="py-4 text-center text-xs text-white/50">
-              No extra details
-            </p>
+            <p className="py-1 text-center text-xs text-white/50">No extra details</p>
           )}
         </div>
 
