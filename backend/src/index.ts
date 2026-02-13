@@ -181,6 +181,39 @@ const ownerSchema = z.object({
   userId: z.string(),
 });
 
+const activitySchema = z
+  .object({
+    actorId: z.string(),
+    type: z.enum(["reaction", "comment", "reply"]),
+    content: z.string().max(280).optional(),
+    reactionKind: z
+      .enum(["thumbs_up", "love", "smile", "cry", "side_eye", "kind"])
+      .optional(),
+    parentId: z.string().optional(),
+    targetCommentId: z.string().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.type === "reaction" && !value.reactionKind) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["reactionKind"],
+        message: "reactionKind is required for reaction type",
+      });
+    }
+
+    if ((value.type === "comment" || value.type === "reply") && !value.content?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["content"],
+        message: "content is required for comments and replies",
+      });
+    }
+  });
+
+const notificationReadSchema = z.object({
+  userId: z.string(),
+});
+
 const uploadSchema = z.object({
   imageData: z.string().min(1),
 });
@@ -248,6 +281,21 @@ const mapEntry = (entry: any) => {
     imageUrl: entry.imageUrl || null,
     editedAt: entry.editedAt || null,
     user: entry.user,
+    unreadActivityCount: Array.isArray(entry.notifications)
+      ? entry.notifications.length
+      : 0,
+    activitySummary: entry.activitySummary || {
+      commentCount: 0,
+      reactionCount: 0,
+      reactions: {
+        thumbs_up: 0,
+        love: 0,
+        smile: 0,
+        cry: 0,
+        side_eye: 0,
+        kind: 0,
+      },
+    },
   };
 };
 
@@ -398,6 +446,7 @@ app.get("/entries", async (req, res) => {
   try {
     const weekStart = req.query.weekStart as string | undefined;
     const date = req.query.date as string | undefined;
+    const userId = req.query.userId as string | undefined;
 
     // Build where clause
     const where: any = {};
@@ -427,14 +476,69 @@ app.get("/entries", async (req, res) => {
 
     const entries = await prisma.entry.findMany({
       where,
-      include: { user: true },
+      include: {
+        user: true,
+        notifications: userId
+          ? {
+              where: {
+                userId,
+                isRead: false,
+              },
+              select: { id: true },
+            }
+          : false,
+      },
       orderBy: { date: "desc" },
     });
+
+    const entryIds = entries.map((entry) => entry.id);
+    const activities =
+      entryIds.length > 0
+        ? await prisma.entryActivity.findMany({
+            where: { entryId: { in: entryIds } },
+            select: { entryId: true, type: true, reactionKind: true },
+          })
+        : [];
+
+    const defaultSummary = () => ({
+      commentCount: 0,
+      reactionCount: 0,
+      reactions: {
+        thumbs_up: 0,
+        love: 0,
+        smile: 0,
+        cry: 0,
+        side_eye: 0,
+        kind: 0,
+      },
+    });
+
+    const summaryMap: Record<string, ReturnType<typeof defaultSummary>> = {};
+
+    for (const activity of activities) {
+      if (!summaryMap[activity.entryId]) {
+        summaryMap[activity.entryId] = defaultSummary();
+      }
+
+      if (activity.type === "reaction" && activity.reactionKind) {
+        summaryMap[activity.entryId].reactionCount += 1;
+        summaryMap[activity.entryId].reactions[activity.reactionKind] += 1;
+      } else if (activity.type === "comment" || activity.type === "reply") {
+        summaryMap[activity.entryId].commentCount += 1;
+      }
+    }
+
+    const mappedEntries = entries.map((entry) =>
+      mapEntry({
+        ...entry,
+        activitySummary: summaryMap[entry.id] || defaultSummary(),
+      }),
+    );
 
     console.log(
       `${colors.green}✓ Found ${entries.length} entries${colors.reset}`,
     );
-    res.json(entries.map(mapEntry));
+    res.json(mappedEntries);
   } catch (error) {
     const message = error instanceof Error ? error.message : error;
     console.error(
@@ -445,6 +549,173 @@ app.get("/entries", async (req, res) => {
       error: "Database error",
       message: "Could not fetch entries.",
     });
+  }
+});
+
+
+app.get("/entries/:id/activities", async (req, res) => {
+  try {
+    const activities = await prisma.entryActivity.findMany({
+      where: { entryId: req.params.id },
+      include: { actor: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const comments = activities.filter(
+      (activity) => activity.type === "comment" || activity.type === "reply",
+    );
+    const reactions = activities.filter((activity) => activity.type === "reaction");
+
+    res.json({ comments, reactions });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(
+      `${colors.red}✗ Failed to fetch activities:${colors.reset}`,
+      message,
+    );
+    res.status(500).json({ error: "Failed to fetch activities" });
+  }
+});
+
+app.post("/entries/:id/activities", async (req, res) => {
+  try {
+    const parsed = activitySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const entry = await prisma.entry.findUnique({
+      where: { id: req.params.id },
+      include: { user: true },
+    });
+
+    if (!entry) {
+      return res.status(404).json({ error: "Entry not found" });
+    }
+
+    const actor = await prisma.user.findUnique({ where: { id: parsed.data.actorId } });
+    if (!actor) {
+      return res.status(404).json({ error: "Actor not found" });
+    }
+
+    if (parsed.data.parentId) {
+      const parentComment = await prisma.entryActivity.findFirst({
+        where: { id: parsed.data.parentId, entryId: entry.id },
+      });
+      if (!parentComment) {
+        return res.status(404).json({ error: "Parent comment not found" });
+      }
+    }
+
+    if (parsed.data.targetCommentId) {
+      const targetComment = await prisma.entryActivity.findFirst({
+        where: { id: parsed.data.targetCommentId, entryId: entry.id },
+      });
+      if (!targetComment) {
+        return res.status(404).json({ error: "Target comment not found" });
+      }
+    }
+
+    const activity = await prisma.entryActivity.create({
+      data: {
+        entryId: entry.id,
+        actorId: parsed.data.actorId,
+        type: parsed.data.type,
+        content: parsed.data.content?.trim() || null,
+        reactionKind: parsed.data.reactionKind,
+        parentId: parsed.data.parentId || null,
+        targetCommentId: parsed.data.targetCommentId || null,
+      },
+    });
+
+    const recipientIds = new Set<string>();
+    if (entry.userId !== parsed.data.actorId) {
+      recipientIds.add(entry.userId);
+    }
+
+    if (parsed.data.parentId) {
+      const parent = await prisma.entryActivity.findUnique({ where: { id: parsed.data.parentId } });
+      if (parent && parent.actorId !== parsed.data.actorId) {
+        recipientIds.add(parent.actorId);
+      }
+    }
+
+    if (parsed.data.targetCommentId) {
+      const target = await prisma.entryActivity.findUnique({ where: { id: parsed.data.targetCommentId } });
+      if (target && target.actorId !== parsed.data.actorId) {
+        recipientIds.add(target.actorId);
+      }
+    }
+
+    if (recipientIds.size > 0) {
+      await prisma.notification.createMany({
+        data: Array.from(recipientIds).map((userId) => ({
+          userId,
+          actorId: parsed.data.actorId,
+          entryId: entry.id,
+          activityId: activity.id,
+          type: parsed.data.type,
+          isRead: false,
+        })),
+      });
+    }
+
+    res.status(201).json(activity);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(`${colors.red}✗ Failed to create activity:${colors.reset}`, message);
+    res.status(500).json({ error: "Failed to create activity" });
+  }
+});
+
+app.get("/notifications/summary", async (req, res) => {
+  try {
+    const parsed = notificationReadSchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    }
+
+    const unreadCount = await prisma.notification.count({
+      where: {
+        userId: parsed.data.userId,
+        isRead: false,
+      },
+    });
+
+    res.json({ unreadCount });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(`${colors.red}✗ Failed to load notification summary:${colors.reset}`, message);
+    res.status(500).json({ error: "Failed to load notification summary" });
+  }
+});
+
+app.post("/entries/:id/notifications/read", async (req, res) => {
+  try {
+    const parsed = notificationReadSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    }
+
+    await prisma.notification.updateMany({
+      where: {
+        entryId: req.params.id,
+        userId: parsed.data.userId,
+        isRead: false,
+      },
+      data: {
+        isRead: true,
+      },
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(`${colors.red}✗ Failed to mark notifications read:${colors.reset}`, message);
+    res.status(500).json({ error: "Failed to mark notifications read" });
   }
 });
 
