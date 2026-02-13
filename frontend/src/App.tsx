@@ -433,7 +433,7 @@ function AppContent() {
   useEffect(() => {
     if (activeUserId) {
       const week = selectedWeekStart || undefined;
-      loadEntries(week);
+      loadEntries(week, undefined, activeUserId);
       loadSummary(week);
     }
   }, [selectedWeekStart, activeUserId]);
@@ -513,9 +513,26 @@ function AppContent() {
               selectedWeekStart={selectedWeekStart}
               onWeekChange={(weekStart) => {
                 setSelectedWeekStart(weekStart);
-                loadEntries(weekStart);
+                loadEntries(weekStart, undefined, activeUserId);
               }}
-              onEntryClick={setSelectedEntry}
+              onEntryClick={async (entry) => {
+                setSelectedEntry(entry);
+                if (!activeUserId) return;
+                try {
+                  await fetch(`${API_URL}/entries/${entry.id}/activity/read`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: activeUserId }),
+                  });
+                  const refreshed = await loadEntries(selectedWeekStart || undefined, undefined, activeUserId);
+                  const latest = refreshed.find((item) => item.id === entry.id);
+                  if (latest) {
+                    setSelectedEntry(latest);
+                  }
+                } catch (_error) {
+                  // no-op
+                }
+              }}
               onDateSelect={(date) => {
                 setActiveDate(date);
               }}
@@ -529,6 +546,7 @@ function AppContent() {
           onTabChange={handleTab}
           onNewEntry={openNewEntry}
           canCreateEntry={Boolean(activeUserId) && !isJudge}
+          hasUnreadActivity={entries.some((entry) => entry.hasUnseenActivity)}
         />
 
         <AnimatePresence>
