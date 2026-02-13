@@ -8,6 +8,7 @@ interface BottomNavProps {
   onTabChange: (tab: ActiveTab) => void;
   onNewEntry: () => void;
   canCreateEntry: boolean;
+  hasUnreadActivity?: boolean;
 }
 
 export default function BottomNav({
@@ -15,6 +16,7 @@ export default function BottomNav({
   onTabChange,
   onNewEntry,
   canCreateEntry,
+  hasUnreadActivity = false,
 }: BottomNavProps) {
   const { theme } = useTheme(); // Get current theme
   const isDark = theme === "dark";
@@ -122,7 +124,12 @@ export default function BottomNav({
             onClick={() => handleTab("history")}
             className={getTabClasses("history")}
           >
-            <History size={20} />
+            <span className="relative inline-flex">
+              <History size={20} />
+              {hasUnreadActivity && (
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-rose-300" />
+              )}
+            </span>
             <span className="text-[9px] font-bold uppercase tracking-tighter">
               History
             </span>

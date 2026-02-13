@@ -14,6 +14,9 @@ model User {
   loveName  String
   track     String
   entries   Entry[]
+  comments  EntryComment[]
+  reactions EntryReaction[]
+  activityReads EntryActivityRead[]
   createdAt DateTime @default(now())
 }
 
@@ -31,7 +34,54 @@ model Entry {
   editedAt  DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments EntryComment[]
+  reactions EntryReaction[]
+  activityReads EntryActivityRead[]
 
   @@index([userId, date])
   @@index([weekStart])
+}
+
+model EntryComment {
+  id        String   @id @default(cuid())
+  entryId    String
+  userId     String
+  parentId   String?
+  content    String
+  createdAt  DateTime @default(now())
+
+  entry      Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent     EntryComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    EntryComment[] @relation("CommentReplies")
+
+  @@index([entryId, createdAt])
+  @@index([userId])
+}
+
+model EntryReaction {
+  id        String   @id @default(cuid())
+  entryId   String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, userId, emoji])
+  @@index([entryId, createdAt])
+}
+
+model EntryActivityRead {
+  id         String   @id @default(cuid())
+  userId     String
+  entryId    String
+  lastSeenAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entryId])
+  @@index([entryId, lastSeenAt])
 }

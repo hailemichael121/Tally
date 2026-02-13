@@ -26,7 +26,7 @@ export function useDataLoader() {
         const [usersResponse, entriesResponse, summaryResponse] =
           await Promise.allSettled([
             fetch(`${API_URL}/users`),
-            fetch(`${API_URL}/entries`),
+            fetch(`${API_URL}/entries${activeUserId ? `?userId=${encodeURIComponent(activeUserId)}` : ""}`),
             fetch(`${API_URL}/weekly-summary`),
           ]);
 
@@ -69,17 +69,22 @@ export function useDataLoader() {
   );
 
   const loadEntries = useCallback(
-    async (weekStart?: string, date?: string) => {
+    async (weekStart?: string, date?: string, userId?: string) => {
       try {
         startLoading("entries");
 
-        let query = "";
+        const params = new URLSearchParams();
         if (weekStart) {
-          query = `?weekStart=${encodeURIComponent(weekStart)}`;
-        } else if (date) {
-          query = `?date=${encodeURIComponent(date)}`;
+          params.set("weekStart", weekStart);
+        }
+        if (date) {
+          params.set("date", date);
+        }
+        if (userId) {
+          params.set("userId", userId);
         }
 
+        const query = params.toString() ? `?${params.toString()}` : "";
         const response = await fetch(`${API_URL}/entries${query}`);
         const data = (await response.json()) as Entry[];
         setEntries(data);

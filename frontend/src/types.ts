@@ -5,6 +5,20 @@ export type User = {
   track: string;
 };
 
+export type EntryComment = {
+  id: string;
+  entryId: string;
+  userId: string;
+  parentId: string | null;
+  content: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    loveName: string;
+  } | null;
+};
+
 export type Entry = {
   id: string;
   userId: string;
@@ -18,6 +32,12 @@ export type Entry = {
   updatedAt?: string;
   editedAt: string | null;
   user: User;
+  hasUnseenActivity?: boolean;
+  commentCount?: number;
+  reactionCount?: number;
+  reactionGroups?: Record<string, number>;
+  latestActivityAt?: string | null;
+  lastSeenAt?: string | null;
 };
 
 export type WeeklySummary = {

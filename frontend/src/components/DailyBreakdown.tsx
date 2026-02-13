@@ -582,6 +582,10 @@ export default function DailyBreakdown({
                   <span className="text-xs text-white/50 truncate max-w-[120px] md:max-w-[160px] mt-0.5">
                     {entry.note || "No note added"}
                   </span>
+                  <span className="text-[10px] text-white/40 mt-1">
+                    ❤️ {entry.reactionCount || 0} · 💬 {entry.commentCount || 0}
+                    {entry.hasUnseenActivity ? " · new" : ""}
+                  </span>
                   {entry.tags && entry.tags.length > 0 && (
                     <div className="flex gap-1 mt-1.5 flex-wrap">
                       {entry.tags.slice(0, 2).map((tag) => (
@@ -602,6 +606,9 @@ export default function DailyBreakdown({
                       {entry.count}
                     </span>
                   </div>
+                  {entry.hasUnseenActivity && (
+                    <span className="h-2 w-2 rounded-full bg-rose-300" title="New activity" />
+                  )}
                   <div className="text-white/20 group-hover:text-white/40 transition-colors">
                     <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   </div>

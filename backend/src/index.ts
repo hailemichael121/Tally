@@ -192,6 +192,22 @@ const userSchema = z.object({
   track: z.string().min(1),
 });
 
+
+const reactionSchema = z.object({
+  userId: z.string(),
+  emoji: z.string().min(1).max(8),
+});
+
+const commentSchema = z.object({
+  userId: z.string(),
+  content: z.string().min(1).max(500),
+  parentId: z.string().optional(),
+});
+
+const readActivitySchema = z.object({
+  userId: z.string(),
+});
+
 const getWeekStart = (isoDate: string) => {
   try {
     const parsed = new Date(isoDate);
@@ -232,10 +248,12 @@ const deserializeTags = (value?: string | null) => {
   }
 };
 
-const mapEntry = (entry: any) => {
+const mapEntry = (entry: any, currentUserId?: string) => {
   if (!entry || typeof entry !== "object") {
     return entry;
   }
+
+  const activity = buildEntryActivity(entry, currentUserId);
 
   return {
     id: entry.id,
@@ -248,8 +266,69 @@ const mapEntry = (entry: any) => {
     imageUrl: entry.imageUrl || null,
     editedAt: entry.editedAt || null,
     user: entry.user,
+    ...activity,
   };
 };
+
+
+
+const buildEntryActivity = (entry: any, currentUserId?: string) => {
+  const comments = Array.isArray(entry.comments) ? entry.comments : [];
+  const reactions = Array.isArray(entry.reactions) ? entry.reactions : [];
+  const lastSeenAt = entry.activityReads?.[0]?.lastSeenAt
+    ? new Date(entry.activityReads[0].lastSeenAt)
+    : null;
+
+  const latestCommentAt = comments[0]?.createdAt
+    ? new Date(comments[0].createdAt)
+    : null;
+  const latestReactionAt = reactions[0]?.createdAt
+    ? new Date(reactions[0].createdAt)
+    : null;
+
+  const latestActivityAt = [latestCommentAt, latestReactionAt]
+    .filter(Boolean)
+    .sort((a, b) => b!.getTime() - a!.getTime())[0] || null;
+
+  const hasUnseenActivity =
+    Boolean(currentUserId) &&
+    Boolean(latestActivityAt) &&
+    (!lastSeenAt || latestActivityAt!.getTime() > lastSeenAt.getTime());
+
+  const groupedReactions: Record<string, number> = reactions.reduce(
+    (acc: Record<string, number>, reaction: any) => {
+      const emoji = reaction.emoji || "❤️";
+      acc[emoji] = (acc[emoji] || 0) + 1;
+      return acc;
+    },
+    {},
+  );
+
+  return {
+    hasUnseenActivity,
+    commentCount: comments.length,
+    reactionCount: reactions.length,
+    reactionGroups: groupedReactions,
+    latestActivityAt,
+    lastSeenAt,
+  };
+};
+
+const mapComment = (comment: any) => ({
+  id: comment.id,
+  entryId: comment.entryId,
+  userId: comment.userId,
+  parentId: comment.parentId || null,
+  content: comment.content,
+  createdAt: comment.createdAt,
+  user: comment.user
+    ? {
+        id: comment.user.id,
+        name: comment.user.name,
+        loveName: comment.user.loveName,
+      }
+    : null,
+});
 
 const hasCloudinaryConfig = () => {
   return Boolean(
@@ -398,6 +477,7 @@ app.get("/entries", async (req, res) => {
   try {
     const weekStart = req.query.weekStart as string | undefined;
     const date = req.query.date as string | undefined;
+    const currentUserId = req.query.userId as string | undefined;
 
     // Build where clause
     const where: any = {};
@@ -427,14 +507,31 @@ app.get("/entries", async (req, res) => {
 
     const entries = await prisma.entry.findMany({
       where,
-      include: { user: true },
+      include: {
+        user: true,
+        comments: {
+          select: { id: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
+        reactions: {
+          select: { id: true, emoji: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        },
+        activityReads: currentUserId
+          ? {
+              where: { userId: currentUserId },
+              select: { lastSeenAt: true },
+              take: 1,
+            }
+          : false,
+      },
       orderBy: { date: "desc" },
     });
 
     console.log(
       `${colors.green}✓ Found ${entries.length} entries${colors.reset}`,
     );
-    res.json(entries.map(mapEntry));
+    res.json(entries.map((entry) => mapEntry(entry, currentUserId)));
   } catch (error) {
     const message = error instanceof Error ? error.message : error;
     console.error(
@@ -754,6 +851,145 @@ app.delete("/entries/:id", async (req, res) => {
       error: "Failed to delete entry",
       message: "Could not delete the entry.",
     });
+  }
+});
+
+
+app.get("/entries/:id/comments", async (req, res) => {
+  try {
+    const comments = await prisma.entryComment.findMany({
+      where: { entryId: req.params.id },
+      include: {
+        user: { select: { id: true, name: true, loveName: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    res.json(comments.map(mapComment));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(`${colors.red}✗ Failed to fetch comments:${colors.reset}`, message);
+    res.status(500).json({ error: "Failed to fetch comments" });
+  }
+});
+
+app.post("/entries/:id/comments", async (req, res) => {
+  try {
+    const parsed = commentSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    }
+
+    const entry = await prisma.entry.findUnique({ where: { id: req.params.id } });
+    if (!entry) {
+      return res.status(404).json({ error: "Entry not found" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (parsed.data.parentId) {
+      const parent = await prisma.entryComment.findUnique({ where: { id: parsed.data.parentId } });
+      if (!parent || parent.entryId !== req.params.id) {
+        return res.status(400).json({ error: "Invalid parent comment" });
+      }
+    }
+
+    const comment = await prisma.entryComment.create({
+      data: {
+        entryId: req.params.id,
+        userId: parsed.data.userId,
+        content: parsed.data.content,
+        parentId: parsed.data.parentId,
+      },
+      include: { user: { select: { id: true, name: true, loveName: true } } },
+    });
+
+    res.status(201).json(mapComment(comment));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(`${colors.red}✗ Failed to add comment:${colors.reset}`, message);
+    res.status(500).json({ error: "Failed to add comment" });
+  }
+});
+
+app.post("/entries/:id/reactions", async (req, res) => {
+  try {
+    const parsed = reactionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    }
+
+    const entry = await prisma.entry.findUnique({ where: { id: req.params.id } });
+    if (!entry) {
+      return res.status(404).json({ error: "Entry not found" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const existing = await prisma.entryReaction.findUnique({
+      where: {
+        entryId_userId_emoji: {
+          entryId: req.params.id,
+          userId: parsed.data.userId,
+          emoji: parsed.data.emoji,
+        },
+      },
+    });
+
+    if (existing) {
+      await prisma.entryReaction.delete({ where: { id: existing.id } });
+      return res.json({ removed: true });
+    }
+
+    const reaction = await prisma.entryReaction.create({
+      data: {
+        entryId: req.params.id,
+        userId: parsed.data.userId,
+        emoji: parsed.data.emoji,
+      },
+    });
+
+    res.status(201).json(reaction);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(`${colors.red}✗ Failed to toggle reaction:${colors.reset}`, message);
+    res.status(500).json({ error: "Failed to toggle reaction" });
+  }
+});
+
+app.post("/entries/:id/activity/read", async (req, res) => {
+  try {
+    const parsed = readActivitySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    }
+
+    await prisma.entryActivityRead.upsert({
+      where: {
+        userId_entryId: {
+          userId: parsed.data.userId,
+          entryId: req.params.id,
+        },
+      },
+      update: { lastSeenAt: new Date() },
+      create: {
+        userId: parsed.data.userId,
+        entryId: req.params.id,
+        lastSeenAt: new Date(),
+      },
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : error;
+    console.error(`${colors.red}✗ Failed to mark activity as read:${colors.reset}`, message);
+    res.status(500).json({ error: "Failed to mark activity as read" });
   }
 });
 
