@@ -607,6 +607,49 @@ app.post("/entries/:id/activities", async (req, res) => {
       return res.status(404).json({ error: "Actor not found" });
     }
 
+    // For reactions - handle toggle (delete if exists, create if doesn't)
+    if (parsed.data.type === "reaction") {
+      const targetId = parsed.data.targetCommentId || null;
+
+      // Check if user already has a reaction on this target
+      const existingReaction = await prisma.entryActivity.findFirst({
+        where: {
+          entryId: entry.id,
+          actorId: parsed.data.actorId,
+          type: "reaction",
+          targetCommentId: targetId,
+        },
+      });
+
+      if (existingReaction) {
+        // If same reaction kind, delete it (toggle off)
+        if (existingReaction.reactionKind === parsed.data.reactionKind) {
+          await prisma.entryActivity.delete({
+            where: { id: existingReaction.id },
+          });
+
+          // Also delete associated notifications
+          await prisma.notification.deleteMany({
+            where: { activityId: existingReaction.id },
+          });
+
+          return res.status(200).json({
+            message: "Reaction removed",
+            action: "removed",
+            reactionKind: parsed.data.reactionKind,
+          });
+        } else {
+          // If different reaction kind, update it
+          const updated = await prisma.entryActivity.update({
+            where: { id: existingReaction.id },
+            data: { reactionKind: parsed.data.reactionKind },
+          });
+          return res.status(200).json(updated);
+        }
+      }
+    }
+
+    // For non-reactions or new reactions, proceed with creation
     if (parsed.data.parentId) {
       const parentComment = await prisma.entryActivity.findFirst({
         where: { id: parsed.data.parentId, entryId: entry.id },
@@ -637,11 +680,15 @@ app.post("/entries/:id/activities", async (req, res) => {
       },
     });
 
+    // Create notifications for relevant users
     const recipientIds = new Set<string>();
+
+    // Notify entry owner if different from actor
     if (entry.userId !== parsed.data.actorId) {
       recipientIds.add(entry.userId);
     }
 
+    // Notify parent comment owner if replying
     if (parsed.data.parentId) {
       const parent = await prisma.entryActivity.findUnique({
         where: { id: parsed.data.parentId },
@@ -651,6 +698,7 @@ app.post("/entries/:id/activities", async (req, res) => {
       }
     }
 
+    // Notify target comment owner if reacting to a comment
     if (parsed.data.targetCommentId) {
       const target = await prisma.entryActivity.findUnique({
         where: { id: parsed.data.targetCommentId },
