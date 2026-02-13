@@ -4,7 +4,7 @@ import { useLoading } from "../contexts/LoadingContext";
 import { useToast } from "../contexts/ToastContext";
 import { User, Entry, WeeklySummary } from "../types";
 
-const API_URL = "https://tally-bibx.onrender.com";
+const API_URL: string = import.meta.env.VITE_API_URL as string;
 
 export function useDataLoader() {
   const { startLoading, stopLoading, isLoading } = useLoading();
@@ -26,7 +26,9 @@ export function useDataLoader() {
         const [usersResponse, entriesResponse, summaryResponse] =
           await Promise.allSettled([
             fetch(`${API_URL}/users`),
-            fetch(`${API_URL}/entries`),
+            fetch(
+              `${API_URL}/entries${activeUserId ? `?userId=${encodeURIComponent(activeUserId)}` : ""}`,
+            ),
             fetch(`${API_URL}/weekly-summary`),
           ]);
 
@@ -69,16 +71,22 @@ export function useDataLoader() {
   );
 
   const loadEntries = useCallback(
-    async (weekStart?: string, date?: string) => {
+    async (weekStart?: string, date?: string, activeUserId?: string) => {
       try {
         startLoading("entries");
 
         let query = "";
+        const params = new URLSearchParams();
         if (weekStart) {
-          query = `?weekStart=${encodeURIComponent(weekStart)}`;
+          params.set("weekStart", weekStart);
         } else if (date) {
-          query = `?date=${encodeURIComponent(date)}`;
+          params.set("date", date);
         }
+        if (activeUserId) {
+          params.set("userId", activeUserId);
+        }
+
+        query = params.toString() ? `?${params.toString()}` : "";
 
         const response = await fetch(`${API_URL}/entries${query}`);
         const data = (await response.json()) as Entry[];

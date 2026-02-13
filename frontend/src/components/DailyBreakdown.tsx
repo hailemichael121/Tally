@@ -1,6 +1,13 @@
 import { Entry } from "../types";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Users, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Users,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  MessageCircle,
+} from "lucide-react";
 
 interface DailyBreakdownProps {
   entries: Entry[];
@@ -565,8 +572,12 @@ export default function DailyBreakdown({
               <button
                 key={entry.id}
                 onClick={() => onEntryClick(entry)}
-                className="w-full flex items-center justify-between p-2.5 md:p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group"
+                className="relative w-full flex items-center justify-between p-2.5 md:p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group"
               >
+                {(entry.unreadActivityCount || 0) > 0 && (
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-300/90 shadow-[0_0_0_4px_rgba(244,114,182,0.12)]" />
+                )}
+
                 <div className="flex flex-col items-start flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 md:gap-2">
                     <span className="text-xs font-medium text-white/90 truncate">
@@ -594,6 +605,20 @@ export default function DailyBreakdown({
                       ))}
                     </div>
                   )}
+
+                  <div className="mt-1.5 flex items-center gap-2 text-[10px] text-white/45">
+                    <span className="inline-flex items-center gap-1">
+                      <Heart className="h-2.5 w-2.5" />
+                      {entry.activitySummary?.reactionCount || 0}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <MessageCircle className="h-2.5 w-2.5" />
+                      {entry.activitySummary?.commentCount || 0}
+                    </span>
+                    {(entry.unreadActivityCount || 0) > 0 && (
+                      <span className="text-rose-200/90">• new</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5 md:gap-2 ml-2">
                   <div className="flex items-center gap-0.5 md:gap-1 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg bg-white/10">

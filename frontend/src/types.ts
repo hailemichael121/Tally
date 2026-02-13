@@ -5,6 +5,15 @@ export type User = {
   track: string;
 };
 
+export type EntryActivityType = "reaction" | "comment" | "reply";
+export type ReactionKind =
+  | "thumbs_up"
+  | "love"
+  | "smile"
+  | "cry"
+  | "side_eye"
+  | "kind";
+
 export type Entry = {
   id: string;
   userId: string;
@@ -17,7 +26,31 @@ export type Entry = {
   createdAt?: string;
   updatedAt?: string;
   editedAt: string | null;
+  unreadActivityCount?: number;
+  activitySummary?: {
+    commentCount: number;
+    reactionCount: number;
+    reactions: Record<ReactionKind, number>;
+  };
   user: User;
+};
+
+export type EntryActivity = {
+  id: string;
+  entryId: string;
+  actorId: string;
+  type: EntryActivityType;
+  content: string | null;
+  reactionKind: ReactionKind | null;
+  parentId: string | null;
+  targetCommentId: string | null;
+  createdAt: string;
+  actor: User;
+};
+
+export type EntryActivitiesResponse = {
+  comments: EntryActivity[];
+  reactions: EntryActivity[];
 };
 
 export type WeeklySummary = {
