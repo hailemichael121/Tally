@@ -19,6 +19,12 @@ type CountdownParts = {
 const MODAL_DISMISSED_KEY = "tally-campaign-modal-dismissed";
 const DEV_MODE = import.meta.env.VITE_CAMPAIGN_DEV_MODE === "true";
 const DEV_FORCE_ENDED = import.meta.env.VITE_CAMPAIGN_DEV_FORCE_ENDED === "true";
+const COUNTDOWN_UNITS: Array<{ key: keyof CountdownParts; label: string }> = [
+  { key: "days", label: "Days" },
+  { key: "hours", label: "Hours" },
+  { key: "minutes", label: "Minutes" },
+  { key: "seconds", label: "Seconds" },
+];
 
 const getNextMondayNoon = (base: Date) => {
   const date = new Date(base);
@@ -348,31 +354,38 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
 
   return (
     <>
-      <div className="glass-card rounded-3xl border border-white/20 bg-gradient-to-r from-fuchsia-500/20 via-violet-500/15 to-cyan-500/20 p-4">
-        <div className="flex items-center justify-between gap-3">
+      <div className="glass-card overflow-hidden rounded-3xl border border-white/20 p-5">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(167,139,250,.25),transparent_55%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(34,211,238,.16),transparent_48%)]" />
+        <div className="relative flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-white/90">my bb, so bb it ends in ...</p>
           {DEV_MODE && (
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="rounded-xl border border-white/30 px-3 py-1 text-xs text-white"
+              className="rounded-xl border border-white/30 bg-white/5 px-3 py-1 text-xs text-white"
             >
               Open mock modal
             </button>
           )}
         </div>
-        <p className="mt-1 text-xs text-white/70">Campaign ends Monday 12:00 PM.</p>
-        <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-          {[
-            [countdown.days, "Days"],
-            [countdown.hours, "Hours"],
-            [countdown.minutes, "Min"],
-            [countdown.seconds, "Sec"],
-          ].map(([value, label]) => (
-            <div key={label as string} className="rounded-2xl bg-black/20 p-2">
-              <p className="text-lg font-semibold">{String(value).padStart(2, "0")}</p>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-white/60">{label}</p>
-            </div>
+        <p className="relative mt-1 text-xs text-white/65">Campaign ends Monday 12:00 PM.</p>
+        <div className="relative mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {COUNTDOWN_UNITS.map((unit) => (
+            <motion.div
+              key={unit.label}
+              className="rounded-2xl border border-white/15 bg-black/20 p-3 text-center"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <p className="text-2xl font-semibold tabular-nums text-white">
+                {String(countdown[unit.key]).padStart(2, "0")}
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-white/55">
+                {unit.label}
+              </p>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -386,12 +399,23 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="glass-card w-full max-w-2xl rounded-3xl border border-white/20 p-4 sm:p-6"
+              className="glass-card relative w-full max-w-2xl overflow-hidden rounded-3xl border border-white/20 p-4 sm:p-6"
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 20, opacity: 0 }}
             >
-              <div className="mb-3 flex items-center justify-between gap-3">
+              <motion.div
+                className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-violet-400/20 blur-3xl"
+                animate={{ scale: [1, 1.08, 1] }}
+                transition={{ duration: 5, repeat: Infinity }}
+              />
+              <motion.div
+                className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-cyan-300/20 blur-3xl"
+                animate={{ scale: [1, 1.06, 1] }}
+                transition={{ duration: 6, repeat: Infinity }}
+              />
+
+              <div className="relative mb-4 flex items-center justify-between gap-3">
                 {cards.map((card, index) => (
                   <button
                     key={card.title}
@@ -401,28 +425,35 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
                     aria-label={`Go to ${card.title}`}
                   >
                     <span
-                      className={`h-2 w-2 rounded-full ${activeStep >= index ? "bg-pink-300" : "bg-white/35"}`}
+                      className={`h-2.5 w-2.5 rounded-full ${activeStep >= index ? "bg-fuchsia-300" : "bg-white/35"}`}
                     />
-                    <span className={`h-[2px] flex-1 ${activeStep > index ? "bg-pink-300" : "bg-white/20"}`} />
+                    <span
+                      className={`h-[2px] flex-1 ${activeStep > index ? "bg-gradient-to-r from-fuchsia-300 to-cyan-300" : "bg-white/20"}`}
+                    />
                   </button>
                 ))}
               </div>
 
-              <div ref={scrollRef} className="flex overflow-hidden">
-                {cards.map((card) => (
-                  <div key={card.title} className="w-full flex-none rounded-2xl bg-white/5 p-4">
+              <div ref={scrollRef} className="relative flex overflow-hidden">
+                {cards.map((card, index) => (
+                  <motion.div
+                    key={card.title}
+                    className="w-full flex-none rounded-2xl border border-white/15 bg-gradient-to-b from-white/10 to-white/5 p-4"
+                    initial={{ opacity: 0.2, scale: 0.98 }}
+                    animate={{ opacity: activeStep === index ? 1 : 0.7, scale: activeStep === index ? 1 : 0.985 }}
+                  >
                     <h3 className="text-lg font-semibold text-white">{card.title}</h3>
                     <div className="mt-3">{card.content}</div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
 
-              <div className="mt-4 flex items-center justify-between">
+              <div className="relative mt-4 flex items-center justify-between">
                 <button
                   type="button"
                   disabled={activeStep === 0}
                   onClick={() => setActiveStep((prev) => Math.max(0, prev - 1))}
-                  className="rounded-xl border border-white/20 px-3 py-2 text-sm text-white disabled:opacity-40"
+                  className="rounded-xl border border-white/25 bg-white/5 px-3 py-2 text-sm text-white disabled:opacity-40"
                 >
                   Back
                 </button>
@@ -430,7 +461,7 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
                   <button
                     type="button"
                     onClick={() => setActiveStep((prev) => Math.min(cards.length - 1, prev + 1))}
-                    className="rounded-xl bg-white/20 px-3 py-2 text-sm font-semibold text-white"
+                    className="rounded-xl bg-gradient-to-r from-fuchsia-400/80 to-cyan-400/80 px-3 py-2 text-sm font-semibold text-white"
                   >
                     Next
                   </button>
@@ -438,7 +469,7 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="rounded-xl bg-white/20 px-3 py-2 text-sm font-semibold text-white"
+                    className="rounded-xl bg-gradient-to-r from-fuchsia-400/80 to-cyan-400/80 px-3 py-2 text-sm font-semibold text-white"
                   >
                     Close
                   </button>
