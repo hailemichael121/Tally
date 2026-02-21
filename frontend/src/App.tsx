@@ -22,6 +22,7 @@ import EntryModal from "./components/EntryModal";
 import EntryForm from "./components/EntryForm";
 import ImageZoom from "./components/ImageZoom";
 import ThemeToggle from "./components/ThemeToggle";
+import CampaignCountdown from "./components/CampaignCountdown";
 import { ThemeContext } from "./contexts/ThemeContext";
 import { LoadingProvider, useLoading } from "./contexts/LoadingContext";
 import SmartSkeleton from "./components/SmartSkeleton";
@@ -563,6 +564,14 @@ function AppContent() {
           </SmartSkeleton>
 
           <JudgeView isJudge={isJudge} />
+
+          {activeUserId && (
+            <CampaignCountdown
+              users={users}
+              entries={entries}
+              activeUserId={activeUserId}
+            />
+          )}
 
           <section className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
             <SmartSkeleton
