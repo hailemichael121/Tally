@@ -17,6 +17,8 @@ type CountdownParts = {
 };
 
 const MODAL_DISMISSED_KEY = "tally-campaign-modal-dismissed";
+const DEV_MODE = import.meta.env.VITE_CAMPAIGN_DEV_MODE === "true";
+const DEV_FORCE_ENDED = import.meta.env.VITE_CAMPAIGN_DEV_FORCE_ENDED === "true";
 
 const getNextMondayNoon = (base: Date) => {
   const date = new Date(base);
@@ -37,11 +39,13 @@ const getNextMondayNoon = (base: Date) => {
 const getCountdown = (target: Date): CountdownParts => {
   const diff = target.getTime() - Date.now();
   const totalMs = Math.max(0, diff);
-  const days = Math.floor(totalMs / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((totalMs / (1000 * 60 * 60)) % 24);
-  const minutes = Math.floor((totalMs / (1000 * 60)) % 60);
-  const seconds = Math.floor((totalMs / 1000) % 60);
-  return { days, hours, minutes, seconds, totalMs };
+  return {
+    days: Math.floor(totalMs / (1000 * 60 * 60 * 24)),
+    hours: Math.floor((totalMs / (1000 * 60 * 60)) % 24),
+    minutes: Math.floor((totalMs / (1000 * 60)) % 60),
+    seconds: Math.floor((totalMs / 1000) % 60),
+    totalMs,
+  };
 };
 
 const formatDate = (date: Date) =>
@@ -51,11 +55,61 @@ const formatDate = (date: Date) =>
     day: "numeric",
   }).format(date);
 
-export default function CampaignCountdown({
-  users,
-  entries,
-  activeUserId,
-}: CampaignCountdownProps) {
+const buildMockUsers = (): User[] => [
+  { id: "tekta", name: "Tekta", loveName: "Shefafit", track: "males" },
+  { id: "yihun", name: "Yihun", loveName: "Shebeto", track: "females" },
+];
+
+const buildMockEntries = () => {
+  const now = new Date();
+  const monday = getNextMondayNoon(now);
+  monday.setDate(monday.getDate() - 7);
+  monday.setHours(9, 0, 0, 0);
+
+  const mock: Entry[] = [];
+  const notes = [
+    "tekta got teased by yihun 😄",
+    "shefafit and shebeto are playful",
+    "yihun yihun yihun!",
+    "tekta in focus today",
+    "shebeto wins hearts",
+    "shefafit mentioned twice shefafit",
+    "final sunday banter",
+  ];
+
+  for (let i = 0; i < 7; i += 1) {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    mock.push({
+      id: `mock-t-${i}`,
+      userId: "tekta",
+      count: 1 + (i % 3),
+      note: notes[i],
+      tags: ["fun", i % 2 === 0 ? "tekta" : "yihun"],
+      date: day.toISOString(),
+      weekStart: monday.toISOString(),
+      imageUrl: null,
+      editedAt: null,
+      user: buildMockUsers()[0],
+    });
+    mock.push({
+      id: `mock-y-${i}`,
+      userId: "yihun",
+      count: 2 + (i % 4),
+      note: `${notes[(i + 2) % notes.length]} shebeto`,
+      tags: ["chaos", i % 2 === 0 ? "shefafit" : "shebeto"],
+      date: day.toISOString(),
+      weekStart: monday.toISOString(),
+      imageUrl: null,
+      editedAt: null,
+      user: buildMockUsers()[1],
+    });
+  }
+
+  return mock;
+};
+
+export default function CampaignCountdown({ users, entries, activeUserId }: CampaignCountdownProps) {
   const [deadline, setDeadline] = useState(() => getNextMondayNoon(new Date()));
   const [countdown, setCountdown] = useState(() => getCountdown(deadline));
   const [modalOpen, setModalOpen] = useState(false);
@@ -63,7 +117,15 @@ export default function CampaignCountdown({
   const [isGoodbye, setIsGoodbye] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
+  const sourceUsers = useMemo(() => (DEV_MODE ? buildMockUsers() : users), [users]);
+  const sourceEntries = useMemo(() => (DEV_MODE ? buildMockEntries() : entries), [entries]);
+
   useEffect(() => {
+    if (DEV_FORCE_ENDED) {
+      setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, totalMs: 0 });
+      return;
+    }
+
     const timer = window.setInterval(() => {
       const next = getCountdown(deadline);
       setCountdown(next);
@@ -88,12 +150,12 @@ export default function CampaignCountdown({
   }, [deadline]);
 
   const players = useMemo(
-    () => users.filter((user) => user.id !== "judge" && user.id !== "yeabsra"),
-    [users],
+    () => sourceUsers.filter((user) => user.id !== "judge" && user.id !== "yeabsra"),
+    [sourceUsers],
   );
 
   const campaignStats = useMemo(() => {
-    const filteredEntries = entries.filter((entry) => {
+    const filteredEntries = sourceEntries.filter((entry) => {
       const time = new Date(entry.date).getTime();
       return (
         time >= previousWeek.start.getTime() &&
@@ -103,6 +165,8 @@ export default function CampaignCountdown({
     });
 
     const totalsByUser: Record<string, number> = {};
+    const mentionsByName: Record<string, number> = {};
+    const mentionsByPlayer: Record<string, number> = {};
     const byDay: Record<string, number> = {
       Monday: 0,
       Tuesday: 0,
@@ -112,8 +176,6 @@ export default function CampaignCountdown({
       Saturday: 0,
       Sunday: 0,
     };
-    const mentionsByName: Record<string, number> = {};
-    const mentionsByPlayer: Record<string, number> = {};
 
     players.forEach((player) => {
       totalsByUser[player.id] = 0;
@@ -122,63 +184,56 @@ export default function CampaignCountdown({
       mentionsByPlayer[player.id] = 0;
     });
 
-    for (const entry of filteredEntries) {
+    filteredEntries.forEach((entry) => {
       totalsByUser[entry.userId] = (totalsByUser[entry.userId] ?? 0) + entry.count;
-      const day = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
-        new Date(entry.date),
-      );
+      const day = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date(entry.date));
       byDay[day] = (byDay[day] ?? 0) + entry.count;
 
       const text = `${entry.note ?? ""} ${(entry.tags || []).join(" ")}`.toLowerCase();
-      for (const player of players) {
-        const names = [player.name, player.loveName].map((name) => name.toLowerCase());
-        for (const candidate of names) {
-          if (!candidate) continue;
+      players.forEach((player) => {
+        [player.name, player.loveName].forEach((raw) => {
+          const candidate = raw.toLowerCase();
           const matches = text.match(new RegExp(`\\b${candidate}\\b`, "g"));
-          if (matches?.length) {
-            mentionsByName[candidate === player.name.toLowerCase() ? player.name : player.loveName] +=
-              matches.length;
-            mentionsByPlayer[player.id] += matches.length;
-          }
-        }
-      }
-    }
+          if (!matches?.length) return;
+          mentionsByName[raw] += matches.length;
+          mentionsByPlayer[player.id] += matches.length;
+        });
+      });
+    });
 
     const sortedPlayers = [...players].sort(
       (a, b) => (totalsByUser[a.id] ?? 0) - (totalsByUser[b.id] ?? 0),
     );
 
-    const winner = sortedPlayers[0];
-    const loser = sortedPlayers[sortedPlayers.length - 1];
-
-    const bestDay = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0] ?? ["Monday", 0];
-    const topMention = Object.entries(mentionsByName).sort((a, b) => b[1] - a[1])[0] ?? ["Nobody", 0];
-
     return {
       totalsByUser,
       byDay,
-      winner,
-      loser,
-      bestDay,
-      topMention,
+      winner: sortedPlayers[0],
+      loser: sortedPlayers[sortedPlayers.length - 1],
+      topMention: Object.entries(mentionsByName).sort((a, b) => b[1] - a[1])[0] ?? ["Nobody", 0],
+      bestDay: Object.entries(byDay).sort((a, b) => b[1] - a[1])[0] ?? ["Monday", 0],
       mentionsByPlayer,
       hasEntries: filteredEntries.length > 0,
     };
-  }, [entries, players, previousWeek.end, previousWeek.start]);
+  }, [players, previousWeek.end, previousWeek.start, sourceEntries]);
 
   useEffect(() => {
     const weekKey = deadline.toISOString().slice(0, 10);
     const dismissed = localStorage.getItem(MODAL_DISMISSED_KEY);
-    if (countdown.totalMs === 0 && activeUserId && dismissed !== weekKey) {
+    if ((countdown.totalMs === 0 || DEV_FORCE_ENDED) && activeUserId && (DEV_MODE || dismissed !== weekKey)) {
       setModalOpen(true);
       setActiveStep(0);
     }
-  }, [countdown.totalMs, deadline, activeUserId]);
+  }, [activeUserId, countdown.totalMs, deadline]);
+
+  useEffect(() => {
+    if (!DEV_MODE) return;
+    setModalOpen(true);
+  }, []);
 
   useEffect(() => {
     if (!scrollRef.current) return;
-    const width = scrollRef.current.clientWidth;
-    scrollRef.current.scrollTo({ left: activeStep * width, behavior: "smooth" });
+    scrollRef.current.scrollTo({ left: scrollRef.current.clientWidth * activeStep, behavior: "smooth" });
   }, [activeStep]);
 
   const closeModal = () => {
@@ -198,10 +253,10 @@ export default function CampaignCountdown({
             {formatDate(previousWeek.start)} → {formatDate(previousWeek.end)}
           </p>
           {players.map((player) => (
-            <p key={player.id} className="flex items-center justify-between rounded-xl bg-white/5 p-3">
+            <div key={player.id} className="flex items-center justify-between rounded-xl bg-white/5 p-3">
               <span>{player.loveName}</span>
               <span className="font-semibold">{campaignStats.totalsByUser[player.id] ?? 0}</span>
-            </p>
+            </div>
           ))}
         </div>
       ),
@@ -214,25 +269,23 @@ export default function CampaignCountdown({
             Highest day: <span className="font-semibold">{campaignStats.bestDay[0]}</span> with{" "}
             <span className="font-semibold">{campaignStats.bestDay[1]}</span> total.
           </p>
-          <div className="space-y-2">
-            {Object.entries(campaignStats.byDay).map(([day, value]) => {
-              const max = Math.max(...Object.values(campaignStats.byDay), 1);
-              return (
-                <div key={day} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span>{day.slice(0, 3)}</span>
-                    <span>{value}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-white/10">
-                    <div
-                      className="h-2 rounded-full bg-gradient-to-r from-pink-400 to-violet-400"
-                      style={{ width: `${(value / max) * 100}%` }}
-                    />
-                  </div>
+          {Object.entries(campaignStats.byDay).map(([day, value]) => {
+            const max = Math.max(...Object.values(campaignStats.byDay), 1);
+            return (
+              <div key={day} className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span>{day.slice(0, 3)}</span>
+                  <span>{value}</span>
                 </div>
-              );
-            })}
-          </div>
+                <div className="h-2 rounded-full bg-white/10">
+                  <div
+                    className="h-2 rounded-full bg-gradient-to-r from-pink-400 to-violet-400"
+                    style={{ width: `${(value / max) * 100}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       ),
     },
@@ -241,16 +294,13 @@ export default function CampaignCountdown({
       content: (
         <div className="space-y-3 text-sm text-white/80">
           <p>
-            Top mention: <span className="font-semibold">{campaignStats.topMention[0]}</span> ({" "}
-            {campaignStats.topMention[1]} times)
+            Top mention: <span className="font-semibold">{campaignStats.topMention[0]}</span> ({campaignStats.topMention[1]} times)
           </p>
           <div className="grid grid-cols-2 gap-2">
             {players.map((player) => (
               <div key={player.id} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
                 <p className="text-xs text-white/60">{player.loveName}</p>
-                <p className="mt-1 text-xl font-semibold">
-                  {campaignStats.mentionsByPlayer[player.id] ?? 0}
-                </p>
+                <p className="mt-1 text-xl font-semibold">{campaignStats.mentionsByPlayer[player.id] ?? 0}</p>
               </div>
             ))}
           </div>
@@ -273,12 +323,16 @@ export default function CampaignCountdown({
           <div className="rounded-2xl border border-emerald-300/40 bg-emerald-500/20 p-3">
             <p className="text-xs uppercase tracking-[0.25em] text-emerald-100">Winner 🏆</p>
             <p className="mt-1 text-lg font-semibold text-emerald-100">{campaignStats.winner?.loveName ?? "TBD"}</p>
-            <p className="text-emerald-100/90">Total: {campaignStats.winner ? campaignStats.totalsByUser[campaignStats.winner.id] : 0}</p>
+            <p className="text-emerald-100/90">
+              Total: {campaignStats.winner ? campaignStats.totalsByUser[campaignStats.winner.id] : 0}
+            </p>
           </div>
           <div className="rounded-2xl border border-rose-300/40 bg-rose-500/20 p-3">
             <p className="text-xs uppercase tracking-[0.25em] text-rose-100">Loser 😢</p>
             <p className="mt-1 text-lg font-semibold text-rose-100">{campaignStats.loser?.loveName ?? "TBD"}</p>
-            <p className="text-rose-100/90">Total: {campaignStats.loser ? campaignStats.totalsByUser[campaignStats.loser.id] : 0}</p>
+            <p className="text-rose-100/90">
+              Total: {campaignStats.loser ? campaignStats.totalsByUser[campaignStats.loser.id] : 0}
+            </p>
           </div>
           <button
             type="button"
@@ -295,8 +349,19 @@ export default function CampaignCountdown({
   return (
     <>
       <div className="glass-card rounded-3xl border border-white/20 bg-gradient-to-r from-fuchsia-500/20 via-violet-500/15 to-cyan-500/20 p-4">
-        <p className="text-xs uppercase tracking-[0.25em] text-white/60">Campaign ending countdown</p>
-        <p className="mt-1 text-sm text-white/80">This round ends Monday at 12:00 PM.</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-white/90">my bb, so bb it ends in ...</p>
+          {DEV_MODE && (
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="rounded-xl border border-white/30 px-3 py-1 text-xs text-white"
+            >
+              Open mock modal
+            </button>
+          )}
+        </div>
+        <p className="mt-1 text-xs text-white/70">Campaign ends Monday 12:00 PM.</p>
         <div className="mt-3 grid grid-cols-4 gap-2 text-center">
           {[
             [countdown.days, "Days"],
@@ -326,23 +391,26 @@ export default function CampaignCountdown({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 20, opacity: 0 }}
             >
-              <div className="mb-3 flex items-center justify-center gap-2">
-                {cards.map((_, index) => (
+              <div className="mb-3 flex items-center justify-between gap-3">
+                {cards.map((card, index) => (
                   <button
-                    key={index}
+                    key={card.title}
                     type="button"
                     onClick={() => setActiveStep(index)}
-                    className={`h-2 rounded-full transition-all ${
-                      activeStep === index ? "w-6 bg-white" : "w-2 bg-white/40"
-                    }`}
-                    aria-label={`Go to step ${index + 1}`}
-                  />
+                    className="flex flex-1 items-center gap-2"
+                    aria-label={`Go to ${card.title}`}
+                  >
+                    <span
+                      className={`h-2 w-2 rounded-full ${activeStep >= index ? "bg-pink-300" : "bg-white/35"}`}
+                    />
+                    <span className={`h-[2px] flex-1 ${activeStep > index ? "bg-pink-300" : "bg-white/20"}`} />
+                  </button>
                 ))}
               </div>
 
-              <div ref={scrollRef} className="flex snap-x snap-mandatory overflow-hidden">
+              <div ref={scrollRef} className="flex overflow-hidden">
                 {cards.map((card) => (
-                  <div key={card.title} className="w-full flex-none snap-center rounded-2xl bg-white/5 p-4">
+                  <div key={card.title} className="w-full flex-none rounded-2xl bg-white/5 p-4">
                     <h3 className="text-lg font-semibold text-white">{card.title}</h3>
                     <div className="mt-3">{card.content}</div>
                   </div>
