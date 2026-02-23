@@ -11,10 +11,10 @@
 :root,
 :root[data-theme="light"] {
   color-scheme: light;
-  --app-bg: #f8f3e8;
+  --app-bg: #fdf7e8;
   --app-text: #111111;
-  --app-card-bg: rgba(255, 255, 255, 0.9);
-  --app-border: rgba(0, 0, 0, 0.5);
+  --app-card-bg: rgba(255, 255, 255, 0.95);
+  --app-border: rgba(0, 0, 0, 0.35);
   --app-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
   --app-muted-bg: rgba(255, 255, 255, 0.6);
   --app-placeholder: rgba(17, 17, 17, 0.56);
@@ -23,9 +23,9 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --app-bg: #0f0f0f;
+  --app-bg: #14122b;
   --app-text: #f7f4ef;
-  --app-card-bg: rgba(255, 255, 255, 0.08);
+  --app-card-bg: rgba(255, 255, 255, 0.1);
   --app-border: rgba(255, 255, 255, 0.15);
   --app-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
   --app-muted-bg: rgba(255, 255, 255, 0.12);
@@ -39,7 +39,10 @@ body {
 }
 
 .app-shell {
-  background: radial-gradient(circle at top right, rgba(0, 0, 0, 0.12), transparent 30%),
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255, 182, 193, 0.22), transparent 25%),
+    radial-gradient(circle at 80% 10%, rgba(167, 139, 250, 0.25), transparent 30%),
+    radial-gradient(circle at 80% 85%, rgba(59, 130, 246, 0.18), transparent 30%),
     var(--app-bg);
   color: var(--app-text);
 }
@@ -48,7 +51,7 @@ body {
   background: var(--app-card-bg) !important;
   border-color: var(--app-border) !important;
   box-shadow: var(--app-shadow);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
 }
 
 .soft-input {

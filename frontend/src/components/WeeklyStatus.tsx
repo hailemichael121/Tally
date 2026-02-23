@@ -117,24 +117,30 @@ export default function WeeklyStatus({
 
   if (!status) return null;
 
+  const antLogo =
+    "https://gw.alipayobjects.com/zos/rmsportal/ODTLcjxAfvqbxHnVXCYX.png";
+
   return (
-    <div className="glass-card rounded-3xl p-6 shadow-soft">
+    <div className="glass-card rounded-3xl border-2 border-white/20 p-6 shadow-soft">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-white/50">
+          <p className="text-xs uppercase tracking-[0.35em] text-white/50">
             Weekly Status
           </p>
           <h2 className="mt-2 text-2xl font-semibold">
             {isJudge ? "Current Standings" : "Your Position"}
           </h2>
         </div>
-        <span className="text-2xl text-white/70">
-          <IconCrown />
-        </span>
+        <div className="flex items-center gap-2">
+          <img src={antLogo} alt="Ant Design" className="h-7 w-7 rounded-full border border-white/20 bg-white/80 p-1" />
+          <span className="text-2xl text-white/70">
+            <IconCrown />
+          </span>
+        </div>
       </div>
 
       <motion.div
-        className={`mt-6 rounded-3xl border ${status.borderColor} ${status.bgColor} p-4`}
+        className={`mt-6 rounded-3xl border-2 ${status.borderColor} ${status.bgColor} bg-[radial-gradient(circle_at_top,_rgba(255,255,255,.22),_transparent_70%)] p-4`}
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
@@ -153,7 +159,7 @@ export default function WeeklyStatus({
       </motion.div>
 
       {/* Head-to-Head Comparison */}
-      <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-4">
+      <div className="mt-6 rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,.15),_transparent_65%)] p-4">
         <p className="text-xs uppercase tracking-[0.3em] text-white/40">
           Head-to-Head
         </p>
