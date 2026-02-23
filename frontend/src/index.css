@@ -11,26 +11,32 @@
 :root,
 :root[data-theme="light"] {
   color-scheme: light;
-  --app-bg: #f8f3e8;
+  --app-bg: #fdf7e8;
   --app-text: #111111;
-  --app-card-bg: rgba(255, 255, 255, 0.9);
-  --app-border: rgba(0, 0, 0, 0.5);
+  --app-card-bg: rgba(255, 255, 255, 0.95);
+  --app-border: rgba(0, 0, 0, 0.35);
   --app-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
   --app-muted-bg: rgba(255, 255, 255, 0.6);
   --app-placeholder: rgba(17, 17, 17, 0.56);
   --app-overlay: rgba(248, 243, 232, 0.55);
+  --app-shell-layer-1: radial-gradient(circle at 15% 15%, rgba(255, 182, 193, 0.22), transparent 25%);
+  --app-shell-layer-2: radial-gradient(circle at 80% 10%, rgba(167, 139, 250, 0.25), transparent 30%);
+  --app-shell-layer-3: radial-gradient(circle at 80% 85%, rgba(59, 130, 246, 0.18), transparent 30%);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --app-bg: #0f0f0f;
-  --app-text: #f7f4ef;
-  --app-card-bg: rgba(255, 255, 255, 0.08);
-  --app-border: rgba(255, 255, 255, 0.15);
+  --app-bg: #0d0d0d;
+  --app-text: #f3f3f3;
+  --app-card-bg: rgba(20, 20, 20, 0.94);
+  --app-border: rgba(255, 255, 255, 0.2);
   --app-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-  --app-muted-bg: rgba(255, 255, 255, 0.12);
-  --app-placeholder: rgba(247, 244, 239, 0.55);
-  --app-overlay: rgba(10, 10, 10, 0.58);
+  --app-muted-bg: rgba(255, 255, 255, 0.08);
+  --app-placeholder: rgba(243, 243, 243, 0.5);
+  --app-overlay: rgba(0, 0, 0, 0.72);
+  --app-shell-layer-1: radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.08), transparent 25%);
+  --app-shell-layer-2: radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.06), transparent 30%);
+  --app-shell-layer-3: radial-gradient(circle at 80% 85%, rgba(255, 255, 255, 0.05), transparent 30%);
 }
 
 body {
@@ -39,7 +45,10 @@ body {
 }
 
 .app-shell {
-  background: radial-gradient(circle at top right, rgba(0, 0, 0, 0.12), transparent 30%),
+  background:
+    var(--app-shell-layer-1),
+    var(--app-shell-layer-2),
+    var(--app-shell-layer-3),
     var(--app-bg);
   color: var(--app-text);
 }
@@ -48,7 +57,7 @@ body {
   background: var(--app-card-bg) !important;
   border-color: var(--app-border) !important;
   box-shadow: var(--app-shadow);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
 }
 
 .soft-input {
@@ -98,4 +107,24 @@ body {
 
 :root[data-theme="light"] [class*="text-mist"] {
   color: #111111 !important;
+}
+
+:root[data-theme="dark"] .ant-logo {
+  filter: grayscale(1) brightness(1.05);
+}
+
+
+:root[data-theme="dark"] [class*="text-green"],
+:root[data-theme="dark"] [class*="text-amber"] {
+  color: #d4d4d4 !important;
+}
+
+:root[data-theme="dark"] [class*="bg-green"],
+:root[data-theme="dark"] [class*="bg-amber"] {
+  background-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+:root[data-theme="dark"] [class*="border-green"],
+:root[data-theme="dark"] [class*="border-amber"] {
+  border-color: rgba(255, 255, 255, 0.2) !important;
 }

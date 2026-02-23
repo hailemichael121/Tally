@@ -18,7 +18,8 @@ type CountdownParts = {
 
 const MODAL_DISMISSED_KEY = "tally-campaign-modal-dismissed";
 const DEV_MODE = import.meta.env.VITE_CAMPAIGN_DEV_MODE === "true";
-const DEV_FORCE_ENDED = import.meta.env.VITE_CAMPAIGN_DEV_FORCE_ENDED === "true";
+const DEV_FORCE_ENDED =
+  import.meta.env.VITE_CAMPAIGN_DEV_FORCE_ENDED === "true";
 
 const COUNTDOWN_UNITS: Array<{ key: keyof CountdownParts; label: string }> = [
   { key: "days", label: "Days" },
@@ -26,6 +27,14 @@ const COUNTDOWN_UNITS: Array<{ key: keyof CountdownParts; label: string }> = [
   { key: "minutes", label: "Minutes" },
   { key: "seconds", label: "Seconds" },
 ];
+
+const ANT_LOGO =
+  "https://gw.alipayobjects.com/zos/rmsportal/ODTLcjxAfvqbxHnVXCYX.png";
+
+const cardRise = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+};
 
 const getNextMondayNoon = (base: Date) => {
   const date = new Date(base);
@@ -117,16 +126,35 @@ const buildMockEntries = () => {
   return mock;
 };
 
-export default function CampaignCountdown({ users, entries, activeUserId }: CampaignCountdownProps) {
+export default function CampaignCountdown({
+  users,
+  entries,
+  activeUserId,
+}: CampaignCountdownProps) {
   const [deadline, setDeadline] = useState(() => getNextMondayNoon(new Date()));
   const [countdown, setCountdown] = useState(() => getCountdown(deadline));
   const [modalOpen, setModalOpen] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [isGoodbye, setIsGoodbye] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const sourceUsers = useMemo(() => (DEV_MODE ? buildMockUsers() : users), [users]);
-  const sourceEntries = useMemo(() => (DEV_MODE ? buildMockEntries() : entries), [entries]);
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
+    const update = () => setIsMobile(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
+
+  const sourceUsers = useMemo(
+    () => (DEV_MODE ? buildMockUsers() : users),
+    [users],
+  );
+  const sourceEntries = useMemo(
+    () => (DEV_MODE ? buildMockEntries() : entries),
+    [entries],
+  );
 
   useEffect(() => {
     if (DEV_FORCE_ENDED) {
@@ -158,7 +186,10 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
   }, [deadline]);
 
   const players = useMemo(
-    () => sourceUsers.filter((user) => user.id !== "judge" && user.id !== "yeabsra"),
+    () =>
+      sourceUsers.filter(
+        (user) => user.id !== "judge" && user.id !== "yeabsra",
+      ),
     [sourceUsers],
   );
 
@@ -193,11 +224,15 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
     });
 
     filteredEntries.forEach((entry) => {
-      totalsByUser[entry.userId] = (totalsByUser[entry.userId] ?? 0) + entry.count;
-      const day = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date(entry.date));
+      totalsByUser[entry.userId] =
+        (totalsByUser[entry.userId] ?? 0) + entry.count;
+      const day = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
+        new Date(entry.date),
+      );
       byDay[day] = (byDay[day] ?? 0) + entry.count;
 
-      const text = `${entry.note ?? ""} ${(entry.tags || []).join(" ")}`.toLowerCase();
+      const text =
+        `${entry.note ?? ""} ${(entry.tags || []).join(" ")}`.toLowerCase();
       players.forEach((player) => {
         [player.name, player.loveName].forEach((raw) => {
           const candidate = raw.toLowerCase();
@@ -218,8 +253,13 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
       byDay,
       winner: sortedPlayers[0],
       loser: sortedPlayers[sortedPlayers.length - 1],
-      topMention: Object.entries(mentionsByName).sort((a, b) => b[1] - a[1])[0] ?? ["Nobody", 0],
-      bestDay: Object.entries(byDay).sort((a, b) => b[1] - a[1])[0] ?? ["Monday", 0],
+      topMention: Object.entries(mentionsByName).sort(
+        (a, b) => b[1] - a[1],
+      )[0] ?? ["Nobody", 0],
+      bestDay: Object.entries(byDay).sort((a, b) => b[1] - a[1])[0] ?? [
+        "Monday",
+        0,
+      ],
       mentionsByPlayer,
       hasEntries: filteredEntries.length > 0,
     };
@@ -258,24 +298,67 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
     setModalOpen(false);
   };
 
+  const maxTotal = Math.max(
+    ...players.map((player) => campaignStats.totalsByUser[player.id] ?? 0),
+    1,
+  );
+
   const cards = [
     {
       title: "Campaign closed",
       content: (
         <div className="space-y-3 text-sm text-white/80">
-          <p className="text-white/75">Playful week recap window:</p>
-          <div className="rounded-xl border border-white/20 bg-white/5 p-3 text-center font-semibold">
-            {formatDate(previousWeek.start)} → {formatDate(previousWeek.end)}
+          <motion.div
+            variants={cardRise}
+            initial="initial"
+            animate="animate"
+            className="rounded-2xl border border-white/20 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,.25),_transparent_70%)] p-3 text-center"
+          >
+            <p className="text-[11px] uppercase tracking-[0.18em] text-white/55">
+              Recap Window
+            </p>
+            <p className="mt-1 font-semibold text-white">
+              {formatDate(previousWeek.start)} → {formatDate(previousWeek.end)}
+            </p>
+          </motion.div>
+          <div className="grid grid-cols-2 gap-2">
+            {players.map((player, index) => {
+              const total = campaignStats.totalsByUser[player.id] ?? 0;
+              const width = (total / maxTotal) * 100;
+              return (
+                <motion.div
+                  key={player.id}
+                  className="rounded-2xl border border-white/15 bg-white/5 p-3"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1, duration: 0.28 }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-white/70">
+                      {player.loveName}
+                    </span>
+                    <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-xs font-semibold text-white">
+                      {total}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-2.5 rounded-full bg-white/10">
+                    <motion.div
+                      className="h-2.5 rounded-full bg-white"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.max(width, 8)}%` }}
+                      transition={{
+                        delay: 0.15 + index * 0.12,
+                        duration: 0.55,
+                      }}
+                    />
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
-          {players.map((player) => (
-            <div
-              key={player.id}
-              className="flex items-center justify-between rounded-xl border border-white/15 bg-white/5 p-3"
-            >
-              <span>{player.loveName}</span>
-              <span className="font-semibold">{campaignStats.totalsByUser[player.id] ?? 0}</span>
-            </div>
-          ))}
+          <div className="rounded-2xl border border-white/15 bg-white/5 p-2 text-center text-xs text-white/70">
+            Smooth Animated score bars · lower total wins
+          </div>
         </div>
       ),
     },
@@ -283,25 +366,34 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
       title: "Week rhythm",
       content: (
         <div className="space-y-3 text-sm text-white/80">
-          <p>
-            Highest day: <span className="font-semibold">{campaignStats.bestDay[0]}</span> (
+          <p className="rounded-xl border border-white/15 bg-white/5 p-2.5 text-center">
+            Highest day:{" "}
+            <span className="font-semibold">{campaignStats.bestDay[0]}</span> (
             {campaignStats.bestDay[1]})
           </p>
           {Object.entries(campaignStats.byDay).map(([day, value]) => {
             const max = Math.max(...Object.values(campaignStats.byDay), 1);
             return (
-              <div key={day} className="space-y-1">
+              <motion.div
+                key={day}
+                className="space-y-1 rounded-xl border border-white/10 bg-white/[0.03] p-2"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+              >
                 <div className="flex justify-between text-xs text-white/70">
                   <span>{day.slice(0, 3)}</span>
                   <span>{value}</span>
                 </div>
                 <div className="h-2 rounded-full bg-white/10">
-                  <div
+                  <motion.div
                     className="h-2 rounded-full bg-white/70"
-                    style={{ width: `${(value / max) * 100}%` }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(value / max) * 100}%` }}
+                    transition={{ duration: 0.45 }}
                   />
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -311,19 +403,28 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
       title: "Mention board",
       content: (
         <div className="space-y-3 text-sm text-white/80">
-          <p>
-            Most mentioned: <span className="font-semibold">{campaignStats.topMention[0]}</span> ({" "}
-            {campaignStats.topMention[1]} times)
+          <p className="rounded-xl border border-white/15 bg-white/5 p-2.5 text-center">
+            Most mentioned:{" "}
+            <span className="font-semibold">{campaignStats.topMention[0]}</span>{" "}
+            ( {campaignStats.topMention[1]} times)
           </p>
           <div className="grid grid-cols-2 gap-2">
-            {players.map((player) => (
-              <div
+            {players.map((player, index) => (
+              <motion.div
                 key={player.id}
-                className="rounded-xl border border-white/15 bg-white/5 p-3 text-center"
+                className="rounded-2xl border border-white/15 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,.16),_transparent_65%)] p-3 text-center"
+                initial={{ opacity: 0, rotateX: -10 }}
+                animate={{ opacity: 1, rotateX: 0 }}
+                transition={{ delay: index * 0.08, duration: 0.3 }}
               >
                 <p className="text-xs text-white/60">{player.loveName}</p>
-                <p className="mt-1 text-xl font-semibold">{campaignStats.mentionsByPlayer[player.id] ?? 0}</p>
-              </div>
+                <p className="mt-1 text-2xl font-semibold">
+                  {campaignStats.mentionsByPlayer[player.id] ?? 0}
+                </p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/45">
+                  mentions
+                </p>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -332,9 +433,18 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
     {
       title: "Drum roll",
       content: (
-        <div className="space-y-4 rounded-xl border border-white/15 bg-white/5 p-4 text-center text-white/80">
+        <div className="space-y-4 rounded-2xl border border-white/15 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,.18),_transparent_70%)] p-4 text-center text-white/80">
+          <p className="text-xs uppercase tracking-[0.2em] text-white/55">
+            Grand Ceremony
+          </p>
           <p className="text-sm">Lowest total wins this challenge.</p>
-          <p className="text-4xl tracking-widest">•••</p>
+          <motion.p
+            className="text-4xl tracking-widest"
+            animate={{ scale: [1, 1.08, 1], opacity: [0.65, 1, 0.65] }}
+            transition={{ repeat: Infinity, duration: 1.4 }}
+          >
+            •••
+          </motion.p>
         </div>
       ),
     },
@@ -342,24 +452,48 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
       title: "Final verdict",
       content: (
         <div className="space-y-3 text-sm">
-          <div className="rounded-xl border border-white/20 bg-white/5 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/60">Winner</p>
-            <p className="mt-1 text-lg font-semibold text-white">{campaignStats.winner?.loveName ?? "TBD"}</p>
-            <p className="text-white/70">
-              Total: {campaignStats.winner ? campaignStats.totalsByUser[campaignStats.winner.id] : 0}
+          <motion.div
+            className="rounded-2xl border border-white/20 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,.24),_transparent_70%)] p-3"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28 }}
+          >
+            <p className="text-xs uppercase tracking-[0.2em] text-white/60">
+              Winner
             </p>
-          </div>
-          <div className="rounded-xl border border-white/20 bg-white/5 p-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/60">Loser</p>
-            <p className="mt-1 text-lg font-semibold text-white">{campaignStats.loser?.loveName ?? "TBD"}</p>
-            <p className="text-white/70">
-              Total: {campaignStats.loser ? campaignStats.totalsByUser[campaignStats.loser.id] : 0}
+            <p className="mt-1 text-lg font-semibold text-white">
+              {campaignStats.winner?.loveName ?? "TBD"}
             </p>
-          </div>
+            <p className="text-white/70">
+              Total:{" "}
+              {campaignStats.winner
+                ? campaignStats.totalsByUser[campaignStats.winner.id]
+                : 0}
+            </p>
+          </motion.div>
+          <motion.div
+            className="rounded-2xl border border-white/20 bg-white/5 p-3"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: 0.1 }}
+          >
+            <p className="text-xs uppercase tracking-[0.2em] text-white/60">
+              Loser
+            </p>
+            <p className="mt-1 text-lg font-semibold text-white">
+              {campaignStats.loser?.loveName ?? "TBD"}
+            </p>
+            <p className="text-white/70">
+              Total:{" "}
+              {campaignStats.loser
+                ? campaignStats.totalsByUser[campaignStats.loser.id]
+                : 0}
+            </p>
+          </motion.div>
           <button
             type="button"
             onClick={() => setIsGoodbye(true)}
-            className="w-full rounded-xl border border-white/25 bg-white/10 px-4 py-2 font-semibold text-white"
+            className="w-full rounded-2xl border border-white/25 bg-[linear-gradient(135deg,_rgba(255,255,255,.15),_rgba(255,255,255,.05))] px-4 py-2 font-semibold text-white"
           >
             Complete ceremony
           </button>
@@ -370,9 +504,15 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
 
   return (
     <>
-      <div className="glass-card rounded-3xl border border-white/20 p-5">
+      <div className="glass-card rounded-[28px] border border-white/20 p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-white/90">my bb, so bb it ends in ...</p>
+          <div className="flex items-center gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-white/60">
+                Campaign ending countdown
+              </p>
+            </div>
+          </div>
           {DEV_MODE && (
             <button
               type="button"
@@ -383,13 +523,15 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
             </button>
           )}
         </div>
-        <p className="mt-1 text-xs text-white/60">Campaign ends Monday 12:00 PM.</p>
+        <p className="mt-2 text-xs text-white/60">
+          Campaign ends Monday 12:00 PM.
+        </p>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {COUNTDOWN_UNITS.map((unit) => (
             <motion.div
               key={unit.label}
-              className="rounded-xl border border-white/20 bg-white/[0.04] p-3 text-center"
+              className="rounded-2xl border-2 border-white/20 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.3),_transparent_72%)] p-3 text-center shadow-[0_8px_20px_rgba(0,0,0,.14)]"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22 }}
@@ -397,7 +539,9 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
               <p className="text-2xl font-semibold tabular-nums text-white">
                 {String(countdown[unit.key]).padStart(2, "0")}
               </p>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/55">{unit.label}</p>
+              <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/55">
+                {unit.label}
+              </p>
             </motion.div>
           ))}
         </div>
@@ -412,41 +556,64 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="glass-card w-full max-w-2xl rounded-3xl border border-white/25 p-4 sm:p-6"
+              className="glass-card w-full max-w-3xl rounded-[32px] border-2 border-white/25 p-4 sm:p-6"
               initial={{ y: 24, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 12, opacity: 0 }}
             >
-              <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
-                {cards.map((card, index) => {
-                  const isActive = activeStep === index;
-                  return (
-                    <button
-                      key={card.title}
-                      type="button"
-                      onClick={() => setActiveStep(index)}
-                      className={`inline-flex min-w-[64px] items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                        isActive
-                          ? "border-white bg-white text-black"
-                          : "border-white/25 bg-white/[0.03] text-white/70"
-                      }`}
-                      aria-label={`Go to step ${index + 1}`}
-                    >
-                      {String(index + 1).padStart(2, "0")}
-                    </button>
-                  );
-                })}
+              <div className="mb-4">
+                {isMobile ? (
+                  <div className="flex items-center justify-center gap-2">
+                    {cards.map((_, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        aria-label={`Go to step ${index + 1}`}
+                        onClick={() => setActiveStep(index)}
+                        className={`h-2.5 rounded-full transition-all ${activeStep === index ? "w-8 bg-white" : "w-2.5 bg-white/30"}`}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-5 gap-2">
+                    {cards.map((card, index) => {
+                      const isActive = activeStep === index;
+                      return (
+                        <button
+                          key={card.title}
+                          type="button"
+                          onClick={() => setActiveStep(index)}
+                          className={`rounded-2xl border px-3 py-2 text-xs font-semibold transition ${
+                            isActive
+                              ? "border-white bg-white text-black"
+                              : "border-white/25 bg-white/[0.03] text-white/70"
+                          }`}
+                        >
+                          <div>{String(index + 1).padStart(2, "0")}</div>
+                          <div className="mt-1 truncate text-[10px]">
+                            {card.title}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div ref={scrollRef} className="flex overflow-hidden">
                 {cards.map((card, index) => (
                   <motion.div
                     key={card.title}
-                    className="w-full flex-none rounded-2xl border border-white/20 bg-white/[0.03] p-4"
+                    className="w-full flex-none rounded-3xl border border-white/20 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.1),_transparent_65%)] p-4"
                     initial={false}
-                    animate={{ opacity: activeStep === index ? 1 : 0.45, scale: activeStep === index ? 1 : 0.985 }}
+                    animate={{
+                      opacity: activeStep === index ? 1 : 0.45,
+                      scale: activeStep === index ? 1 : 0.985,
+                    }}
                   >
-                    <h3 className="text-center text-lg font-semibold text-white">{card.title}</h3>
+                    <h3 className="text-center text-lg font-semibold text-white">
+                      {card.title}
+                    </h3>
                     <div className="mt-3">{card.content}</div>
                   </motion.div>
                 ))}
@@ -465,7 +632,11 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
                 {activeStep < cards.length - 1 ? (
                   <button
                     type="button"
-                    onClick={() => setActiveStep((prev) => Math.min(cards.length - 1, prev + 1))}
+                    onClick={() =>
+                      setActiveStep((prev) =>
+                        Math.min(cards.length - 1, prev + 1),
+                      )
+                    }
                     className="rounded-xl border border-white/25 bg-white/90 px-4 py-2 text-sm font-semibold text-black"
                   >
                     Next

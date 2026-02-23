@@ -189,7 +189,9 @@ const ReactionButton = ({
         {count > 0 && (
           <span
             className={`${size === "small" ? "text-[8px]" : "text-[10px] sm:text-xs"} ${
-              isActive ? "text-fuchsia-100 dark:text-fuchsia-200" : "text-white/60"
+              isActive
+                ? "text-fuchsia-100 dark:text-fuchsia-200"
+                : "text-white/60"
             }`}
           >
             {count}
@@ -701,7 +703,6 @@ export default function EntryModal({
         ...(targetCommentId ? { targetCommentId } : {}),
       });
       setTimeout(() => setActiveReaction(null), 250);
-
     },
     [entry.id, onAddActivity, activeUserId, reactionMap],
   );
@@ -753,7 +754,6 @@ export default function EntryModal({
       // Fix: Pass undefined instead of null for optional parameters
       await onAddActivity(entry.id, "reaction", { reactionKind: kind });
       setTimeout(() => setActiveReaction(null), 250);
-
     },
     [entry.id, entryReaction, onAddActivity, activeUserId],
   );
@@ -823,13 +823,13 @@ export default function EntryModal({
       onClick={onClose}
     >
       <motion.div
-        className="glass-card w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-soft flex flex-col"
+        className="glass-card w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border-2 border-white/20 sm:rounded-3xl shadow-soft flex flex-col"
         onClick={(event) => event.stopPropagation()}
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
       >
-        <div className="flex items-center justify-between border-b border-white/10 p-3 sm:p-4">
+        <div className="flex items-center justify-between border-b border-white/10 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,.2),_transparent_70%)] p-3 sm:p-4">
           <div>
             <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-white/50">
               ENTRY
@@ -842,12 +842,14 @@ export default function EntryModal({
               {entry.count === 1 ? "person" : "people"}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-full border border-white/10 p-1.5 sm:p-2 hover:bg-white/10 transition-colors"
-          >
-            <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="rounded-full border border-white/10 p-1.5 sm:p-2 hover:bg-white/10 transition-colors"
+            >
+              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4">

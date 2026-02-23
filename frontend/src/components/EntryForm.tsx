@@ -50,10 +50,10 @@ export default function EntryForm({
     >
       <form
         onSubmit={handleSubmit}
-        className="glass-card w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl p-4 shadow-soft sm:max-h-[88vh] sm:p-6"
+        className="glass-card w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-[30px] border-2 border-white/20 p-4 shadow-soft sm:max-h-[88vh] sm:p-6"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="theme-panel flex items-start justify-between rounded-2xl border border-white/10 px-3 py-3 backdrop-blur-sm sm:px-4">
+        <div className="theme-panel flex items-start justify-between rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,.24),_transparent_70%)] px-3 py-3 backdrop-blur-sm sm:px-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">
               {formState.id ? "Edit Entry" : "New Entry"}
