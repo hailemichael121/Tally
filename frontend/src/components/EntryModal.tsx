@@ -105,8 +105,6 @@ const formatTime = (value: string) =>
     minute: "2-digit",
   }).format(new Date(value));
 
-const ANT_LOGO = "https://gw.alipayobjects.com/zos/rmsportal/ODTLcjxAfvqbxHnVXCYX.png";
-
 // Helper to build nested comment tree
 const buildCommentTree = (comments: EntryActivity[]): CommentWithReplies[] => {
   const commentMap = new Map<string, CommentWithReplies>();
@@ -191,7 +189,9 @@ const ReactionButton = ({
         {count > 0 && (
           <span
             className={`${size === "small" ? "text-[8px]" : "text-[10px] sm:text-xs"} ${
-              isActive ? "text-fuchsia-100 dark:text-fuchsia-200" : "text-white/60"
+              isActive
+                ? "text-fuchsia-100 dark:text-fuchsia-200"
+                : "text-white/60"
             }`}
           >
             {count}
@@ -703,7 +703,6 @@ export default function EntryModal({
         ...(targetCommentId ? { targetCommentId } : {}),
       });
       setTimeout(() => setActiveReaction(null), 250);
-
     },
     [entry.id, onAddActivity, activeUserId, reactionMap],
   );
@@ -755,7 +754,6 @@ export default function EntryModal({
       // Fix: Pass undefined instead of null for optional parameters
       await onAddActivity(entry.id, "reaction", { reactionKind: kind });
       setTimeout(() => setActiveReaction(null), 250);
-
     },
     [entry.id, entryReaction, onAddActivity, activeUserId],
   );
@@ -845,7 +843,6 @@ export default function EntryModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <img src={ANT_LOGO} alt="Ant Design" className="ant-logo hidden h-7 w-7 rounded-full border border-white/20 bg-white/80 p-1 sm:block" />
             <button
               onClick={onClose}
               className="rounded-full border border-white/10 p-1.5 sm:p-2 hover:bg-white/10 transition-colors"

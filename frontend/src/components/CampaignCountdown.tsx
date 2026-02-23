@@ -18,7 +18,8 @@ type CountdownParts = {
 
 const MODAL_DISMISSED_KEY = "tally-campaign-modal-dismissed";
 const DEV_MODE = import.meta.env.VITE_CAMPAIGN_DEV_MODE === "true";
-const DEV_FORCE_ENDED = import.meta.env.VITE_CAMPAIGN_DEV_FORCE_ENDED === "true";
+const DEV_FORCE_ENDED =
+  import.meta.env.VITE_CAMPAIGN_DEV_FORCE_ENDED === "true";
 
 const COUNTDOWN_UNITS: Array<{ key: keyof CountdownParts; label: string }> = [
   { key: "days", label: "Days" },
@@ -27,7 +28,8 @@ const COUNTDOWN_UNITS: Array<{ key: keyof CountdownParts; label: string }> = [
   { key: "seconds", label: "Seconds" },
 ];
 
-const ANT_LOGO = "https://gw.alipayobjects.com/zos/rmsportal/ODTLcjxAfvqbxHnVXCYX.png";
+const ANT_LOGO =
+  "https://gw.alipayobjects.com/zos/rmsportal/ODTLcjxAfvqbxHnVXCYX.png";
 
 const cardRise = {
   initial: { opacity: 0, y: 8 },
@@ -124,7 +126,11 @@ const buildMockEntries = () => {
   return mock;
 };
 
-export default function CampaignCountdown({ users, entries, activeUserId }: CampaignCountdownProps) {
+export default function CampaignCountdown({
+  users,
+  entries,
+  activeUserId,
+}: CampaignCountdownProps) {
   const [deadline, setDeadline] = useState(() => getNextMondayNoon(new Date()));
   const [countdown, setCountdown] = useState(() => getCountdown(deadline));
   const [modalOpen, setModalOpen] = useState(false);
@@ -141,8 +147,14 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
     return () => mediaQuery.removeEventListener("change", update);
   }, []);
 
-  const sourceUsers = useMemo(() => (DEV_MODE ? buildMockUsers() : users), [users]);
-  const sourceEntries = useMemo(() => (DEV_MODE ? buildMockEntries() : entries), [entries]);
+  const sourceUsers = useMemo(
+    () => (DEV_MODE ? buildMockUsers() : users),
+    [users],
+  );
+  const sourceEntries = useMemo(
+    () => (DEV_MODE ? buildMockEntries() : entries),
+    [entries],
+  );
 
   useEffect(() => {
     if (DEV_FORCE_ENDED) {
@@ -174,7 +186,10 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
   }, [deadline]);
 
   const players = useMemo(
-    () => sourceUsers.filter((user) => user.id !== "judge" && user.id !== "yeabsra"),
+    () =>
+      sourceUsers.filter(
+        (user) => user.id !== "judge" && user.id !== "yeabsra",
+      ),
     [sourceUsers],
   );
 
@@ -209,11 +224,15 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
     });
 
     filteredEntries.forEach((entry) => {
-      totalsByUser[entry.userId] = (totalsByUser[entry.userId] ?? 0) + entry.count;
-      const day = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date(entry.date));
+      totalsByUser[entry.userId] =
+        (totalsByUser[entry.userId] ?? 0) + entry.count;
+      const day = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
+        new Date(entry.date),
+      );
       byDay[day] = (byDay[day] ?? 0) + entry.count;
 
-      const text = `${entry.note ?? ""} ${(entry.tags || []).join(" ")}`.toLowerCase();
+      const text =
+        `${entry.note ?? ""} ${(entry.tags || []).join(" ")}`.toLowerCase();
       players.forEach((player) => {
         [player.name, player.loveName].forEach((raw) => {
           const candidate = raw.toLowerCase();
@@ -234,8 +253,13 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
       byDay,
       winner: sortedPlayers[0],
       loser: sortedPlayers[sortedPlayers.length - 1],
-      topMention: Object.entries(mentionsByName).sort((a, b) => b[1] - a[1])[0] ?? ["Nobody", 0],
-      bestDay: Object.entries(byDay).sort((a, b) => b[1] - a[1])[0] ?? ["Monday", 0],
+      topMention: Object.entries(mentionsByName).sort(
+        (a, b) => b[1] - a[1],
+      )[0] ?? ["Nobody", 0],
+      bestDay: Object.entries(byDay).sort((a, b) => b[1] - a[1])[0] ?? [
+        "Monday",
+        0,
+      ],
       mentionsByPlayer,
       hasEntries: filteredEntries.length > 0,
     };
@@ -274,7 +298,10 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
     setModalOpen(false);
   };
 
-  const maxTotal = Math.max(...players.map((player) => campaignStats.totalsByUser[player.id] ?? 0), 1);
+  const maxTotal = Math.max(
+    ...players.map((player) => campaignStats.totalsByUser[player.id] ?? 0),
+    1,
+  );
 
   const cards = [
     {
@@ -287,7 +314,9 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
             animate="animate"
             className="rounded-2xl border border-white/20 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,.25),_transparent_70%)] p-3 text-center"
           >
-            <p className="text-[11px] uppercase tracking-[0.18em] text-white/55">Recap Window</p>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-white/55">
+              Recap Window
+            </p>
             <p className="mt-1 font-semibold text-white">
               {formatDate(previousWeek.start)} → {formatDate(previousWeek.end)}
             </p>
@@ -305,7 +334,9 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
                   transition={{ delay: index * 0.1, duration: 0.28 }}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-white/70">{player.loveName}</span>
+                    <span className="text-xs text-white/70">
+                      {player.loveName}
+                    </span>
                     <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-xs font-semibold text-white">
                       {total}
                     </span>
@@ -315,7 +346,10 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
                       className="h-2.5 rounded-full bg-white"
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.max(width, 8)}%` }}
-                      transition={{ delay: 0.15 + index * 0.12, duration: 0.55 }}
+                      transition={{
+                        delay: 0.15 + index * 0.12,
+                        duration: 0.55,
+                      }}
                     />
                   </div>
                 </motion.div>
@@ -333,7 +367,8 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
       content: (
         <div className="space-y-3 text-sm text-white/80">
           <p className="rounded-xl border border-white/15 bg-white/5 p-2.5 text-center">
-            Highest day: <span className="font-semibold">{campaignStats.bestDay[0]}</span> (
+            Highest day:{" "}
+            <span className="font-semibold">{campaignStats.bestDay[0]}</span> (
             {campaignStats.bestDay[1]})
           </p>
           {Object.entries(campaignStats.byDay).map(([day, value]) => {
@@ -369,8 +404,9 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
       content: (
         <div className="space-y-3 text-sm text-white/80">
           <p className="rounded-xl border border-white/15 bg-white/5 p-2.5 text-center">
-            Most mentioned: <span className="font-semibold">{campaignStats.topMention[0]}</span> ({" "}
-            {campaignStats.topMention[1]} times)
+            Most mentioned:{" "}
+            <span className="font-semibold">{campaignStats.topMention[0]}</span>{" "}
+            ( {campaignStats.topMention[1]} times)
           </p>
           <div className="grid grid-cols-2 gap-2">
             {players.map((player, index) => (
@@ -382,8 +418,12 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
                 transition={{ delay: index * 0.08, duration: 0.3 }}
               >
                 <p className="text-xs text-white/60">{player.loveName}</p>
-                <p className="mt-1 text-2xl font-semibold">{campaignStats.mentionsByPlayer[player.id] ?? 0}</p>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/45">mentions</p>
+                <p className="mt-1 text-2xl font-semibold">
+                  {campaignStats.mentionsByPlayer[player.id] ?? 0}
+                </p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/45">
+                  mentions
+                </p>
               </motion.div>
             ))}
           </div>
@@ -394,7 +434,9 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
       title: "Drum roll",
       content: (
         <div className="space-y-4 rounded-2xl border border-white/15 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,.18),_transparent_70%)] p-4 text-center text-white/80">
-          <p className="text-xs uppercase tracking-[0.2em] text-white/55">Grand Ceremony</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-white/55">
+            Grand Ceremony
+          </p>
           <p className="text-sm">Lowest total wins this challenge.</p>
           <motion.p
             className="text-4xl tracking-widest"
@@ -416,10 +458,17 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28 }}
           >
-            <p className="text-xs uppercase tracking-[0.2em] text-white/60">Winner</p>
-            <p className="mt-1 text-lg font-semibold text-white">{campaignStats.winner?.loveName ?? "TBD"}</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-white/60">
+              Winner
+            </p>
+            <p className="mt-1 text-lg font-semibold text-white">
+              {campaignStats.winner?.loveName ?? "TBD"}
+            </p>
             <p className="text-white/70">
-              Total: {campaignStats.winner ? campaignStats.totalsByUser[campaignStats.winner.id] : 0}
+              Total:{" "}
+              {campaignStats.winner
+                ? campaignStats.totalsByUser[campaignStats.winner.id]
+                : 0}
             </p>
           </motion.div>
           <motion.div
@@ -428,10 +477,17 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28, delay: 0.1 }}
           >
-            <p className="text-xs uppercase tracking-[0.2em] text-white/60">Loser</p>
-            <p className="mt-1 text-lg font-semibold text-white">{campaignStats.loser?.loveName ?? "TBD"}</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-white/60">
+              Loser
+            </p>
+            <p className="mt-1 text-lg font-semibold text-white">
+              {campaignStats.loser?.loveName ?? "TBD"}
+            </p>
             <p className="text-white/70">
-              Total: {campaignStats.loser ? campaignStats.totalsByUser[campaignStats.loser.id] : 0}
+              Total:{" "}
+              {campaignStats.loser
+                ? campaignStats.totalsByUser[campaignStats.loser.id]
+                : 0}
             </p>
           </motion.div>
           <button
@@ -451,10 +507,10 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
       <div className="glass-card rounded-[28px] border border-white/20 p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <img src={ANT_LOGO} alt="Ant Design" className="ant-logo h-8 w-8 rounded-full border border-white/20 bg-white/80 p-1" />
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-white/60">Ant Design Cartoon Style</p>
-              <p className="text-sm font-semibold text-white/90">Campaign ending countdown</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-white/60">
+                Campaign ending countdown
+              </p>
             </div>
           </div>
           {DEV_MODE && (
@@ -467,7 +523,9 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
             </button>
           )}
         </div>
-        <p className="mt-2 text-xs text-white/60">Playful theme in light + dark mode. Campaign ends Monday 12:00 PM.</p>
+        <p className="mt-2 text-xs text-white/60">
+          Campaign ends Monday 12:00 PM.
+        </p>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {COUNTDOWN_UNITS.map((unit) => (
@@ -481,7 +539,9 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
               <p className="text-2xl font-semibold tabular-nums text-white">
                 {String(countdown[unit.key]).padStart(2, "0")}
               </p>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/55">{unit.label}</p>
+              <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/55">
+                {unit.label}
+              </p>
             </motion.div>
           ))}
         </div>
@@ -530,7 +590,9 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
                           }`}
                         >
                           <div>{String(index + 1).padStart(2, "0")}</div>
-                          <div className="mt-1 truncate text-[10px]">{card.title}</div>
+                          <div className="mt-1 truncate text-[10px]">
+                            {card.title}
+                          </div>
                         </button>
                       );
                     })}
@@ -544,9 +606,14 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
                     key={card.title}
                     className="w-full flex-none rounded-3xl border border-white/20 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.1),_transparent_65%)] p-4"
                     initial={false}
-                    animate={{ opacity: activeStep === index ? 1 : 0.45, scale: activeStep === index ? 1 : 0.985 }}
+                    animate={{
+                      opacity: activeStep === index ? 1 : 0.45,
+                      scale: activeStep === index ? 1 : 0.985,
+                    }}
                   >
-                    <h3 className="text-center text-lg font-semibold text-white">{card.title}</h3>
+                    <h3 className="text-center text-lg font-semibold text-white">
+                      {card.title}
+                    </h3>
                     <div className="mt-3">{card.content}</div>
                   </motion.div>
                 ))}
@@ -565,7 +632,11 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
                 {activeStep < cards.length - 1 ? (
                   <button
                     type="button"
-                    onClick={() => setActiveStep((prev) => Math.min(cards.length - 1, prev + 1))}
+                    onClick={() =>
+                      setActiveStep((prev) =>
+                        Math.min(cards.length - 1, prev + 1),
+                      )
+                    }
                     className="rounded-xl border border-white/25 bg-white/90 px-4 py-2 text-sm font-semibold text-black"
                   >
                     Next

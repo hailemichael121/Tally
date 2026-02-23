@@ -117,9 +117,6 @@ export default function WeeklyStatus({
 
   if (!status) return null;
 
-  const antLogo =
-    "https://gw.alipayobjects.com/zos/rmsportal/ODTLcjxAfvqbxHnVXCYX.png";
-
   return (
     <div className="glass-card rounded-3xl border-2 border-white/20 p-6 shadow-soft">
       <div className="flex items-start justify-between">
@@ -132,7 +129,6 @@ export default function WeeklyStatus({
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <img src={antLogo} alt="Ant Design" className="ant-logo h-7 w-7 rounded-full border border-white/20 bg-white/80 p-1" />
           <span className="text-2xl text-white/70">
             <IconCrown />
           </span>
