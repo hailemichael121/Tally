@@ -451,7 +451,7 @@ export default function CampaignCountdown({ users, entries, activeUserId }: Camp
       <div className="glass-card rounded-[28px] border border-white/20 p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <img src={ANT_LOGO} alt="Ant Design" className="h-8 w-8 rounded-full border border-white/20 bg-white/80 p-1" />
+            <img src={ANT_LOGO} alt="Ant Design" className="ant-logo h-8 w-8 rounded-full border border-white/20 bg-white/80 p-1" />
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-white/60">Ant Design Cartoon Style</p>
               <p className="text-sm font-semibold text-white/90">Campaign ending countdown</p>

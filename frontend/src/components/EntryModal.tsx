@@ -845,7 +845,7 @@ export default function EntryModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <img src={ANT_LOGO} alt="Ant Design" className="hidden h-7 w-7 rounded-full border border-white/20 bg-white/80 p-1 sm:block" />
+            <img src={ANT_LOGO} alt="Ant Design" className="ant-logo hidden h-7 w-7 rounded-full border border-white/20 bg-white/80 p-1 sm:block" />
             <button
               onClick={onClose}
               className="rounded-full border border-white/10 p-1.5 sm:p-2 hover:bg-white/10 transition-colors"
